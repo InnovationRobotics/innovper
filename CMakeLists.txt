@@ -115,7 +115,11 @@ catkin_package(
 
 add_executable(innovper src/publisher.cpp)
 target_link_libraries(innovper ${catkin_LIBRARIES})
-add_dependencies(innovper innovper_generate_messages_cpp)
+#add_dependencies(innovper innovper_generate_messages_cpp)
+
+
+add_executable(innov_pose src/posepublisher.cpp)
+target_link_libraries(innov_pose ${catkin_LIBRARIES})
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
