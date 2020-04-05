@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -120,6 +121,9 @@ target_link_libraries(innovper ${catkin_LIBRARIES})
 
 add_executable(innov_pose src/posepublisher.cpp)
 target_link_libraries(innov_pose ${catkin_LIBRARIES})
+
+add_executable(innov_example src/example.cpp)
+target_link_libraries(innov_example ${catkin_LIBRARIES})
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
