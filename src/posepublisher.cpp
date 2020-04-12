@@ -155,6 +155,17 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 
     printf("\nSmart loader status %d\nMap Size %d %d\n", smartLoaderStruct.status, 
         heightMap_res_size[0], heightMap_res_size[1]);
+    
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(0.0, 0.0, 0.0) );
+    tf::Quaternion q;
+    q.setRPY(0, 0, 0);
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "base_link"));
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "map"));
+    
+    
     //Build GMap topic
     // Grid Map
     std::string second_fixed_frame = "/map";
