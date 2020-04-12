@@ -65,7 +65,7 @@ namespace IAIRoboticsAlgorithms
 
 		static bool ReadBinary(const char* binaryImgPath, int& numBands, int& numBytePerBand, int& width, int& height, std::vector<unsigned char>& data)
 		{
-			assert(std::experimental::filesystem::exists(binaryImgPath));
+			//assert(std::experimental::filesystem::exists(binaryImgPath));
 
 			std::string pathstr, name, ext, token = "$$";
 			IAIRoboticsAlgorithms::FileUtility::GetFileParts(std::string(binaryImgPath), pathstr, name, ext);

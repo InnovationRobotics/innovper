@@ -16,6 +16,12 @@ grid_map_msgs::GridMap gmap;
 
 ros::Publisher p_pub, m_pub, sh_pub;
 
+std::string datasetPath = "/home/sload/Downloads/WorkingVerForUTWindows/SmartLoader/SmartLoaderDataset/Test2/";
+std::string xyzPath = "xyz$$c1_d_w3_h17235.bin", intensityPath = "intensity$$c1_d_w1_h17235.bin";
+int xyzNumBands, xyzNumBytePerBand, xyzWidth, xyzHeight;
+std::vector<unsigned char> xyzData;
+int intensityNumBands, intensityNumBytePerBand, intensityWidth, intensityHeight;
+std::vector<unsigned char> intensityData;
 
 struct DataToCallbackFunction
 {
@@ -75,34 +81,45 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
    ROS_INFO("Got Point Cloud message %x, %d", &pc, pc.header.seq);
    //onPoseSet(0.968507917975, -4.61491396765, 1);
 
+    // Print the size of the preloaded buffers 
    std::vector<float> xyz, x,y,z,intensity;
    auto numPoints = pc.height * pc.width;
+   auto isWorkWithFSdata = true;
 
-    x.reserve(numPoints);
-    y.reserve(numPoints);
-    z.reserve(numPoints);
-    xyz.reserve(numPoints);
-    intensity.reserve(numPoints);
+    if (!isWorkWithFSdata)
+    {  
+        x.reserve(numPoints);
+        y.reserve(numPoints);
+        z.reserve(numPoints);
+        xyz.reserve(numPoints);
+        intensity.reserve(numPoints);
 
-    for (auto j = 0; j < pc.height; j++)
-    {
-        for (auto i = 0; i < pc.width; i++)
+        for (auto j = 0; j < pc.height; j++)
         {
-            auto loc = j * pc.row_step + i * pc.point_step;
-            // float *xCorPtr = *((float*)&pc.data[loc]);
-            x.push_back(*((float*)&pc.data[loc]));
-            y.push_back(*((float*)&pc.data[loc + 4]));
-            z.push_back(*((float*)&pc.data[loc + 8]));
+            for (auto i = 0; i < pc.width; i++)
+            {
+                auto loc = j * pc.row_step + i * pc.point_step;
+                // float *xCorPtr = *((float*)&pc.data[loc]);
+                x.push_back(*((float*)&pc.data[loc]));
+                y.push_back(*((float*)&pc.data[loc + 4]));
+                z.push_back(*((float*)&pc.data[loc + 8]));
 
-            xyz.push_back(*((float*)&pc.data[loc]));
-            xyz.push_back(*((float*)&pc.data[loc + 4]));
-            xyz.push_back(*((float*)&pc.data[loc + 8]));
-            intensity.push_back(*((float*)&pc.data[loc + 16]));    
+                xyz.push_back(*((float*)&pc.data[loc]));
+                xyz.push_back(*((float*)&pc.data[loc + 4]));
+                xyz.push_back(*((float*)&pc.data[loc + 8]));
+                intensity.push_back(*((float*)&pc.data[loc + 16]));    
+            }
         }
+            // TODO: save to file system 
+        printf("size of intensity vector %d", intensity.size());
     }
-
-    // TODO: save to file system 
-    printf("size of vector %d", x.size());
+    else 
+    {
+        printf("\nxyz loaded size %d\n", xyzHeight * xyzWidth );
+        printf("\nintensity loaded size %d\n", intensityWidth * intensityHeight );
+        numPoints = intensityWidth * intensityHeight;
+    }
+    printf("\nnumPoints = %d\n", numPoints);
 
 #ifdef SAVE_LOGS
     if (x.size() > 0)
@@ -150,9 +167,20 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 	heightMap_res_data.resize(1024 * 1024);
 	int heightMap_res_size[2] = { 0,0 };
 
-    SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzDouble[0], xyz_size, (double*)&intensityDouble[0], intensity_size,
+    printf("\nBefore SmartLoader call\n");
+    if (isWorkWithFSdata)
+    {
+        SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzData[0], xyz_size,
+         (double*)&intensityData[0], intensity_size,
         &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
-
+    }
+    else 
+    {
+        SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzDouble[0], xyz_size, (double*)&intensityDouble[0], intensity_size,
+        &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
+    }
+    printf("\nAfter SmartLoader call\n");
+    
     printf("\nSmart loader status %d\nMap Size %d %d\n", smartLoaderStruct.status, 
         heightMap_res_size[0], heightMap_res_size[1]);
     
@@ -170,37 +198,92 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     // Grid Map
     std::string second_fixed_frame = "/map";
     gmap.info.header.frame_id = second_fixed_frame;
+    // gmap.info.header.seq = pose.header.seq;
     gmap.info.header.stamp = ros::Time::now();
 
     printf("\nPrint1\n");
 
-    if (false) 
+    if (isWorkWithFSdata) 
     {
-        // TODO: Shahar  // TODO: shshar
         gmap.info.resolution = 0.1; 
+        gmap.info.length_x = 10;
+        gmap.info.length_y = 10;
+        gmap.info.pose.orientation.x = gmap.info.pose.orientation.y = gmap.info.pose.orientation.z = 
+            gmap.info.pose.orientation.w = 0;
+        // memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
+        
+        gmap.info.pose.position.x = gmap.info.pose.position.y = gmap.info.pose.position.z = 0;
+        // memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
+        gmap.basic_layers.push_back(std::string("smartloadMap"));
+        gmap.layers.push_back(std::string("smartloadMap"));
+        // gmap.data.resize(gmap.info.length_x * gmap.info.resolution 
+        //     * gmap.info.length_y * gmap.info.resolution);
+        // int numElements = gmap.info.length_x / gmap.info.resolution 
+        //      * gmap.info.length_y / gmap.info.resolution;
 
-        // TODO: shshar x,y directions 
-        // TODO: shshar
-        gmap.info.length_x = 0.1;
-        // TODO: shshar
-        gmap.info.length_y = 0.1;
-        memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
-        memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
-        gmap.info.pose.position.x = 5;
-        gmap.info.pose.position.y = 5;
+       int numElements = heightMap_res_size[0] * heightMap_res_size[1];
 
-        if (heightMap_res_size[0] * heightMap_res_size[1] > 0)
-        {
-            gmap.layers.push_back(std::string("smartload"));
-            gmap.data.resize(heightMap_res_size[0] * heightMap_res_size[1]);
-            memcpy(&gmap.data[0], &heightMap_res_data[0], sizeof(float) * heightMap_res_size[0] * heightMap_res_size[1]);
-        }
-        else 
-        {
-            gmap.layers.push_back(std::string("smartload"));
-            gmap.data.resize(1024 * 1024);
-            memset(&gmap.data[0], 0x00, 1024 * 1024 * sizeof(float));
-        }
+        std_msgs::Float32MultiArray float32MultiArray; 
+
+        // MultiArrayLayout 
+        std_msgs::MultiArrayDimension multiArrayDimensionCol,multiArrayDimensionRow;
+        multiArrayDimensionCol.label = std::string("column_index");
+        //multiArrayDimensionCol.size = gmap.info.length_x / gmap.info.resolution;
+        multiArrayDimensionCol.size = heightMap_res_size[1];
+        multiArrayDimensionCol.stride = sizeof(float); 
+
+        multiArrayDimensionRow.label = std::string("row_index");
+        // multiArrayDimensionRow.size = gmap.info.length_y / gmap.info.resolution;
+        multiArrayDimensionRow.size = heightMap_res_size[0];
+        multiArrayDimensionRow.stride = multiArrayDimensionCol.size * sizeof(float); 
+
+        float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
+        float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
+        
+        float32MultiArray.layout.data_offset = 0;
+
+        float32MultiArray.data.resize(numElements);
+
+        size_t tt = numElements * sizeof(float);
+        float32MultiArray.data = std::vector<float>(heightMap_res_data.begin(), heightMap_res_data.end());
+
+        // memcpy(float32MultiArray.data[0], heightMap_res_data)
+        // memcpy((void*)&(float32MultiArray.data[0]), 
+        //     (void*)&(heightMap_res_data.data[0]), tt);
+
+        // for (int i = 0; i < numElements; i++)
+        // {
+        //     float32MultiArray.data.push_back(rand());
+        //     //float32MultiArray.data.push_back(0.1 * i);
+        // }
+
+        gmap.data.push_back(float32MultiArray);
+
+        // // TODO: Shahar  // TODO: shshar
+        // gmap.info.resolution = 0.1; 
+
+        // // TODO: shshar x,y directions 
+        // // TODO: shshar
+        // gmap.info.length_x = 10;
+        // // TODO: shshar
+        // gmap.info.length_y = 10;
+        // memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
+        // memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
+        // gmap.info.pose.position.x = 5;
+        // gmap.info.pose.position.y = 5;
+
+        // if (heightMap_res_size[0] * heightMap_res_size[1] > 0)
+        // {
+        //     gmap.layers.push_back(std::string("smartload"));
+        //     gmap.data.resize(heightMap_res_size[0] * heightMap_res_size[1]);
+        //     memcpy(&gmap.data[0], &heightMap_res_data[0], sizeof(float) * heightMap_res_size[0] * heightMap_res_size[1]);
+        // }
+        // else 
+        // {
+        //     gmap.layers.push_back(std::string("smartload"));
+        //     gmap.data.resize(1024 * 1024);
+        //     memset(&gmap.data[0], 0x00, 1024 * 1024 * sizeof(float));
+        // }
     }
     else 
     {
@@ -241,7 +324,6 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         }
 
         gmap.data.push_back(float32MultiArray);
-
     }
 
     printf("\nPrint2\n");
@@ -278,8 +360,11 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         // TOOD Michele  
         pose.pose.covariance[0] = 0;
     }
+    printf("\nLoader location (x=%f, y=%f, z=%f)\n", 
+        smartLoaderStruct.loaderLoc[0], smartLoaderStruct.loaderLoc[1], smartLoaderStruct.loaderLoc[2]);
     
-    
+    printf("\nShovel location (x=%f, y=%f, z=%f)\n", 
+        smartLoaderStruct.shvelLoc[0], smartLoaderStruct.shvelLoc[1], smartLoaderStruct.shvelLoc[2]);
 
     //Topic localization of the shovel
     //std::string fixed_frame = "/base_link";
@@ -304,6 +389,16 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     printf("\nPrint4\n");
     p_pub.publish(pose);
     printf("\nPrint5\n");
+
+    if (1) 
+    {
+        gmap.info.header.seq = pose.header.seq;
+        static uint32_t counterTemp = 0;
+        gmap.info.header.seq = counterTemp++;
+    }
+
+    printf("\nmap seq %d\n", gmap.info.header.seq);
+
     m_pub.publish(gmap);
     printf("\nPrint6\n");
 }
@@ -357,6 +452,14 @@ int main(int argc, char** argv)
 
     globalDataToCallbackFunction.configParams = &configParams;
     globalDataToCallbackFunction.SD = &SD;
+
+    //////////////////////////
+	auto retVal = IAIRoboticsAlgorithms::BinaryIO::ReadBinary((datasetPath + xyzPath).c_str(), xyzNumBands, xyzNumBytePerBand, xyzWidth, xyzHeight, xyzData);
+	//assert(retVal); if (!retVal) return;
+
+	retVal = IAIRoboticsAlgorithms::BinaryIO::ReadBinary((datasetPath + intensityPath).c_str(), intensityNumBands, intensityNumBytePerBand, intensityWidth, intensityHeight, intensityData);
+	//assert(retVal); if (!retVal) return;
+    /////////////////////////
 
     s_sub = nh.subscribe("/velodyne_points", 1000, dealWithPCloudCB);
    
