@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(innovper)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++14  -g)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -115,15 +115,16 @@ target_link_libraries(innovper ${catkin_LIBRARIES})
 #add_dependencies(innovper innovper_generate_messages_cpp)
 #list(APPEND CMAKE_PREFIX_PATH "/home/sload/ws/catkin_ws/src/innovper/lib")
 
+link_directories("/home/sload/ws/catkin_ws/src/innovper/lib" "/usr/lib/x86-64-linux-gnu")
 
 find_library(SHAHAR
-    NAMES mwmorphop_binary_tbb mwmorphop_ocv mwbwlookup_tbb mwippreconstruct mwipp mwmorphop_flat_tbb  nppicc opencv_cudaarithm opencv_flann nppicom opencv_cudabgsegm opencv_imgproc nppidei opencv_cudafeatures2d opencv_ml nppif opencv_cudafilters opencv_objdetect nppig opencv_cudaimgproc opencv_video nppim opencv_cudalegacy stdc++ nppist opencv_cudaobjdetect tbbmalloc nppisu opencv_cudaoptflow tbb 
+    NAMES mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_flat_tbb mwbwlookup_tbb mwippreconstruct mwipp mwmorphop_flat_tbb  nppicc opencv_cudaarithm opencv_flann nppicom opencv_cudabgsegm opencv_imgproc nppidei opencv_cudafeatures2d opencv_ml nppif opencv_cudafilters opencv_objdetect nppig opencv_cudaimgproc opencv_video nppim opencv_cudalegacy stdc++ nppist opencv_cudaobjdetect tbbmalloc nppisu opencv_cudaoptflow tbb 
     HINTS "/home/sload/ws/catkin_ws/src/innovper/lib"
 )
 add_executable(innov_pose src/posepublisher.cpp src/SmartLoader.cpp src/rtGetInf.cpp  src/rt_nonfinite.cpp  src/SmartLoader_emxutil.cpp src/rtGetNaN.cpp)
 
 
-target_link_libraries(innov_pose ${SHAHAR}    ${catkin_LIBRARIES} )
+target_link_libraries(innov_pose  mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_flat_tbb gomp ${catkin_LIBRARIES} )
 
 add_executable(innov_example src/example.cpp)
 target_link_libraries(innov_example ${catkin_LIBRARIES})

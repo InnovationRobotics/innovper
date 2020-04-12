@@ -4,6 +4,7 @@
 #include <grid_map_msgs/GridMap.h>
 //#include <grid_map_msgs/GridMapInfo.h>
 #include <tf/transform_broadcaster.h>
+#include <std_msgs/Float32MultiArray.h>
 #include "BinaryIO.h"
 #include "SmartLoader.h"
 
@@ -103,6 +104,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     // TODO: save to file system 
     printf("size of vector %d", x.size());
 
+#ifdef SAVE_LOGS
     if (x.size() > 0)
     {
         static int counter = 0;
@@ -121,7 +123,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         st = path + "intensity_" + std::to_string(counter) + ".bin";
         IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&intensity[0], 1, sizeof(float), intensity.size(), 1, "i");
     }
-    
+#endif    
     // TODO: apply the algorithm
     // Udpate the time tag in the config 
     // // // // auto& t = pc.header.stamp; 
@@ -151,25 +153,87 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzDouble[0], xyz_size, (double*)&intensityDouble[0], intensity_size,
         &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
 
+    printf("\nSmart loader status %d\nMap Size %d %d\n", smartLoaderStruct.status, 
+        heightMap_res_size[0], heightMap_res_size[1]);
     //Build GMap topic
     // Grid Map
     std::string second_fixed_frame = "/map";
     gmap.info.header.frame_id = second_fixed_frame;
     gmap.info.header.stamp = ros::Time::now();
 
-    // TODO: Shahar  
-    gmap.info.resolution = 0; 
+    printf("\nPrint1\n");
 
-    // TODO: shshar x,y directions 
-    gmap.info.length_x = 0;
-    gmap.info.length_y = 0;
-    memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
-    memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
-    
+    if (false) 
+    {
+        // TODO: Shahar  // TODO: shshar
+        gmap.info.resolution = 0.1; 
 
-    gmap.layers.push_back(std::string("smartload"));
-    gmap.data.resize(heightMap_res_size[0] * heightMap_res_size[1]);
-    memcpy(&gmap.data[0], &heightMap_res_data[0], sizeof(float) * heightMap_res_size[0] * heightMap_res_size[1]);
+        // TODO: shshar x,y directions 
+        // TODO: shshar
+        gmap.info.length_x = 0.1;
+        // TODO: shshar
+        gmap.info.length_y = 0.1;
+        memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
+        memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
+        gmap.info.pose.position.x = 5;
+        gmap.info.pose.position.y = 5;
+
+        if (heightMap_res_size[0] * heightMap_res_size[1] > 0)
+        {
+            gmap.layers.push_back(std::string("smartload"));
+            gmap.data.resize(heightMap_res_size[0] * heightMap_res_size[1]);
+            memcpy(&gmap.data[0], &heightMap_res_data[0], sizeof(float) * heightMap_res_size[0] * heightMap_res_size[1]);
+        }
+        else 
+        {
+            gmap.layers.push_back(std::string("smartload"));
+            gmap.data.resize(1024 * 1024);
+            memset(&gmap.data[0], 0x00, 1024 * 1024 * sizeof(float));
+        }
+    }
+    else 
+    {
+        gmap.info.resolution = 0.1; 
+        gmap.info.length_x = 100;
+        gmap.info.length_y = 100;
+        memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
+        memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
+        gmap.basic_layers.push_back(std::string("smartloadMap"));
+        gmap.layers.push_back(std::string("smartloadMap"));
+        // gmap.data.resize(gmap.info.length_x * gmap.info.resolution 
+        //     * gmap.info.length_y * gmap.info.resolution);
+        int numElements = gmap.info.length_x / gmap.info.resolution 
+             * gmap.info.length_y / gmap.info.resolution;
+        
+        std_msgs::Float32MultiArray float32MultiArray; 
+
+        // MultiArrayLayout 
+        std_msgs::MultiArrayDimension multiArrayDimensionCol,multiArrayDimensionRow;
+        multiArrayDimensionCol.label = std::string("column_index");
+        multiArrayDimensionCol.size = gmap.info.length_x / gmap.info.resolution;
+        multiArrayDimensionCol.stride = sizeof(float); 
+
+        multiArrayDimensionRow.label = std::string("row_index");
+        multiArrayDimensionRow.size = gmap.info.length_y / gmap.info.resolution;
+        multiArrayDimensionRow.stride = multiArrayDimensionCol.size * sizeof(float); 
+
+        float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
+        float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
+        
+        float32MultiArray.layout.data_offset = 0;
+
+        float32MultiArray.data.resize(numElements);
+        for (int i = 0; i < numElements; i++)
+        {
+            float32MultiArray.data.push_back(rand());
+            //float32MultiArray.data.push_back(0.1 * i);
+        }
+
+        gmap.data.push_back(float32MultiArray);
+
+    }
+
+    printf("\nPrint2\n");
 
     // Row start index (default 0).
     gmap.inner_start_index = 0;
@@ -207,7 +271,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     
 
     //Topic localization of the shovel
-    std::string fixed_frame = "/base_link";
+    //std::string fixed_frame = "/base_link";
     sh_pose.header.frame_id = fixed_frame;
     sh_pose.header.stamp = gmap.info.header.stamp;
 
@@ -223,11 +287,14 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         // TOOD Michele  
         sh_pose.pose.covariance[0] = 0;
     }
-    
-    m_pub.publish(gmap);
-    p_pub.publish(pose);
+
+    printf("\nPrint3\n");
     sh_pub.publish(sh_pose);
-    
+    printf("\nPrint4\n");
+    p_pub.publish(pose);
+    printf("\nPrint5\n");
+    m_pub.publish(gmap);
+    printf("\nPrint6\n");
 }
 
 
