@@ -48,7 +48,7 @@ namespace IAIRoboticsAlgorithms
 			// Our token for Matlab reference 
 			// stringSavePath = pathstr + "\\" + name + BinaryIO::GetBinaryToken(numBands, numBytePerBand, srcWidth, srcHeight) + ext;
 			
-			std::string stringSavePath = "/home/sload/Downloads/temp/3/" + token + 
+			std::string stringSavePath = "/home/sload/Downloads/temp/10/" + token + 
 				BinaryIO::GetBinaryToken(numBands, numBytePerBand, srcWidth, srcHeight) + ".bin";
 
 			// Save the raw data 

@@ -6,7 +6,7 @@
 #include <tf/transform_broadcaster.h>
 #include <std_msgs/Float32MultiArray.h>
 #include "BinaryIO.h"
-#include "SmartLoader.h"
+#include "PerceptionSmartLoader.h"
 
 
 //double pose(int flag);
@@ -25,8 +25,8 @@ std::vector<unsigned char> intensityData;
 
 struct DataToCallbackFunction
 {
-    SmartLoaderConfigParam* configParams;
-    std::unique_ptr<SmartLoaderStackData>* SD;
+    PerceptionSmartLoaderConfigParam* configParams;
+    std::unique_ptr<PerceptionSmartLoaderStackData>* SD;
 };
 DataToCallbackFunction globalDataToCallbackFunction;
 
@@ -76,6 +76,28 @@ void onPoseSet(double x, double y, double theta)
 
 }
 
+const char* GetPerceptionSmartLoaderStatusString(PerceptionSmartLoaderReturnValue status)
+{
+    if (status == PerceptionSmartLoaderReturnValue::PerceptionSmartLoaderReturnValue_eSuccess)
+        return "eSuccess";
+
+    else if (status == PerceptionSmartLoaderReturnValue::PerceptionSmartLoaderReturnValue_eFailed)
+        return "eFailed";
+
+    else if (status == PerceptionSmartLoaderReturnValue::PerceptionSmartLoaderReturnValue_eFailedNotEnoughPoints)
+        return "eFailedNotEnoughPoints";
+
+    else if (status == PerceptionSmartLoaderReturnValue::PerceptionSmartLoaderReturnValue_eFailedNotEnoughReflectorPoints)
+        return "eFailedNotEnoughReflectorPoints";
+            
+    else if (status == PerceptionSmartLoaderReturnValue::PerceptionSmartLoaderReturnValue_eFailedLoaderLocation)
+        return "eFailedLoaderLocation";
+    
+    else 
+        throw("unsupported return value");
+}
+
+
 void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 {
    ROS_INFO("Got Point Cloud message %x, %d", &pc, pc.header.seq);
@@ -107,11 +129,11 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
                 xyz.push_back(*((float*)&pc.data[loc]));
                 xyz.push_back(*((float*)&pc.data[loc + 4]));
                 xyz.push_back(*((float*)&pc.data[loc + 8]));
-                intensity.push_back(*((float*)&pc.data[loc + 16]));    
+                intensity.push_back(*((float*)&pc.data[loc + 12]));    
             }
         }
             // TODO: save to file system 
-        printf("size of intensity vector %d, x %d, y %d, z 5d, xyz %d", intensity.size(), x.size(), y.size(), z.size(), xyz.size());
+        printf("size of intensity vector %d, x %d, y %d, z %d, xyz %d", intensity.size(), x.size(), y.size(), z.size(), xyz.size());
     }
     else 
     {
@@ -121,6 +143,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     }
     printf("\nnumPoints = %d\n", numPoints);
 
+#define SAVE_LOGS
 #ifdef SAVE_LOGS
     // printf("x.size=%d", x.size());
     if (x.size() > 0)
@@ -131,13 +154,13 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 
         //st = path + "x" + std::to_string(counter) + ".bin";
         st = path + "x" + std::to_string(counter);
-        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&x[0], 1, sizeof(float), x.size(), 1, "x");
+        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&x[0], 1, sizeof(float), x.size(), 1, std::to_string(counter) + "x");
 
         st = path + "y" + std::to_string(counter) + ".bin";
-        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&y[0], 1, sizeof(float), y.size(), 1, "y");
+        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&y[0], 1, sizeof(float), y.size(), 1, std::to_string(counter) + "y");
 
         st = path + "z" + std::to_string(counter) + ".bin";
-        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&z[0], 1, sizeof(float), z.size(), 1, "z");
+        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&z[0], 1, sizeof(float), z.size(), 1, std::to_string(counter) + "z");
 
         st = path + "intensity_" + std::to_string(counter) + ".bin";
         IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&intensity[0], 1, sizeof(float), intensity.size(), 1, "i");
@@ -163,7 +186,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     std::vector<double> xyzDouble(xyz.begin(), xyz.end());
     std::vector<double> intensityDouble(intensity.begin(), intensity.end());
 
-    SmartLoaderStruct smartLoaderStruct;
+    PerceptionSmartLoaderStruct smartLoaderStruct;
 
     std::vector<float> heightMap_res_data;
 	heightMap_res_data.resize(1024 * 1024);
@@ -172,18 +195,20 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     printf("\nBefore SmartLoader call\n");
     if (isWorkingWithFSdata)
     {
-        SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzData[0], xyz_size,
-         (double*)&intensityData[0], intensity_size,
-        &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
+        // PerceptionSmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzData[0], xyz_size,
+        //  (double*)&intensityData[0], intensity_size,
+        // &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
     }
     else 
     {
-        SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzDouble[0], xyz_size, (double*)&intensityDouble[0], intensity_size,
-        &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
+        PerceptionSmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, 
+            (double*)&xyzDouble[0], xyz_size, (double*)&intensityDouble[0], intensity_size,
+            &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
     }
     //printf("\nAfter SmartLoader call\n");
     
-    printf("\nSmart loader status %d\nMap Size %d %d\n", smartLoaderStruct.status, 
+    printf("\nSmart loader status %s\nMap Size %d %d\n", 
+        GetPerceptionSmartLoaderStatusString(smartLoaderStruct.status), 
         heightMap_res_size[0], heightMap_res_size[1]);
     
     static tf::TransformBroadcaster br;
@@ -366,7 +391,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         smartLoaderStruct.loaderLoc[0], smartLoaderStruct.loaderLoc[1], smartLoaderStruct.loaderLoc[2]);
     
     printf("\nShovel location (x=%f, y=%f, z=%f)\n", 
-        smartLoaderStruct.shvelLoc[0], smartLoaderStruct.shvelLoc[1], smartLoaderStruct.shvelLoc[2]);
+        smartLoaderStruct.shovelLoc[0], smartLoaderStruct.shovelLoc[1], smartLoaderStruct.shovelLoc[2]);
 
     //Topic localization of the shovel
     //std::string fixed_frame = "/base_link";
@@ -375,9 +400,9 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 
     if (smartLoaderStruct.status)
     {
-        sh_pose.pose.pose.position.x = smartLoaderStruct.shvelLoc[0];
-        sh_pose.pose.pose.position.y = smartLoaderStruct.shvelLoc[1];
-        sh_pose.pose.pose.position.z = smartLoaderStruct.shvelLoc[2];
+        sh_pose.pose.pose.position.x = smartLoaderStruct.shovelLoc[0];
+        sh_pose.pose.pose.position.y = smartLoaderStruct.shovelLoc[1];
+        sh_pose.pose.pose.position.z = smartLoaderStruct.shovelLoc[2];
         //TODO SHAHAR pose.pose.pose.orientation
     }
     else 
@@ -406,28 +431,53 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 }
 
 
-void GetPerceptionConfig(SmartLoaderConfigParam& configParams)
+void GetPerceptionConfig(PerceptionSmartLoaderConfigParam& configParams)
 {
-	memset(&configParams, 0x00, sizeof(configParams));
+    memset(&configParams, 0x00, sizeof(configParams));
 	configParams.timeTagMs = 1;
-	configParams.planeModelParameters[0] = -0.028009425848722;
-	configParams.planeModelParameters[1] = -5.510213086381555e-04;
-	configParams.planeModelParameters[2] = 0.999607503414154;
-	configParams.planeModelParameters[3] = 2.846343278884888;
-	configParams.useExternalProjectionMatrix = false;
-	// configParams.externalProjectionMatrix is already set to zero
-	double xyzLimits[6]= { -1.681562873721123, 1.918437126278877, -9999, 9999, -3.361619710922240, -2.361619710922240};
+
+	configParams.planeModelParameters[0] = 0.00110673982744076;
+	configParams.planeModelParameters[1] = -0.0110968341035824;
+	configParams.planeModelParameters[2] = 0.999937815766476;
+	configParams.planeModelParameters[3] = 0.0883062285706899;
+	configParams.maxDistanceToPlaneMeter = 0.04;
+	configParams.pcAlignmentProjMat[0] = -0.0523359562429438;
+	configParams.pcAlignmentProjMat[1] = -0.998629534754574;
+	configParams.pcAlignmentProjMat[2] = 0;
+	configParams.pcAlignmentProjMat[3] = 2.01807360260713;
+	configParams.pcAlignmentProjMat[4] = 0;
+	configParams.pcAlignmentProjMat[5] = 0;
+	configParams.pcAlignmentProjMat[6] = -1;
+	configParams.pcAlignmentProjMat[7] = 0.788678396529591;
+	configParams.pcAlignmentProjMat[8] = 0.998629534754574;
+	configParams.pcAlignmentProjMat[9] = -0.0523359562429438;
+	configParams.pcAlignmentProjMat[10] = 0;
+	configParams.pcAlignmentProjMat[11] = 2.75633839020317;
+
+	double xyzLimits[6]= { 0, 5, 0, 1.50000000000000, -0.500000000000000, 0.500000000000000 };
 	memcpy(configParams.xyzLimits, xyzLimits, sizeof(configParams.xyzLimits));
+
 	configParams.minNumPointsInPc = 64;
 	configParams.minimumDistanceFromLoaderToPlaneMeter = 0.2;
 	configParams.minPointsForReflector = 5;
 	configParams.maximumTimeTagDiffMs = 3000;
 	configParams.minimumIntensityReflectorValue = 100;
 	configParams.loaderReflectorDiameterMeter = 0.18;
+	configParams.loaderWhiteHatMeter = 0.15;
+	configParams.loaderCenterToBackwardPointMeter = 0.2850;
+	configParams.locationsBiasMeter = 0.05;
+	configParams.loaderWidthMeter = 0.233;
 	configParams.reflectorMaxZaxisDistanceForOutlierMeter = 0.06;
 	configParams.previousLoaderLocationToCurrentLocationMaximumDistanceMeter = 0.18;
 	configParams.loaderReflectorMaxZaxisDistanceForOutlierMeter = 0.04;
 	configParams.maxDistanceBetweenEachRayMeter = 0.07;
+	configParams.heightMapResolutionMeterToPixel = 0.04;
+	configParams.maxDistanceFromThePlaneForLoaderYawCalculation = 0.100000000000000;
+	configParams.yawEstimationMinPercentageOfPointsInLoaderBody = 0.6;
+	configParams.yawEstimationMinNumPointsInLoaderBody = 40;
+	configParams.loaderYawAngleSmoothWeight = 0.6;
+	configParams.loaderToShovelYawAngleSmoothWeight = 0.6;
+
 	configParams.debugMode = false;
 }
 
@@ -435,13 +485,13 @@ void GetPerceptionConfig(SmartLoaderConfigParam& configParams)
 int main(int argc, char** argv)
 {
     // Initialize perception code
-    SmartLoaderConfigParam configParams;
+    PerceptionSmartLoaderConfigParam configParams;
     GetPerceptionConfig(configParams);
-    auto SD = std::make_unique<SmartLoaderStackData>();
-	auto pd = std::make_unique<SmartLoaderPersistentData>();
+    auto SD = std::make_unique<PerceptionSmartLoaderStackData>();
+	auto pd = std::make_unique<PerceptionSmartLoaderPersistentData>();
 	SD->pd = pd.get();
 
-	SmartLoader_initialize(SD.get());
+	PerceptionSmartLoader_initialize(SD.get());
 
     // setting
     ros::init(argc, argv, "sl_pose");
@@ -482,7 +532,7 @@ int main(int argc, char** argv)
    } 
   
 
-  SmartLoader_terminate();
+  PerceptionSmartLoader_terminate(SD.get());
 
    return 0;
 }

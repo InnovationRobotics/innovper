@@ -1,8 +1,8 @@
 /*
- * rtwtypes.h
+ * File: rtwtypes.h
  *
- * Code generation for function 'SmartLoader'
- *
+ * MATLAB Coder version            : 4.1
+ * C/C++ source code generated on  : 20-Apr-2020 15:35:54
  */
 
 #ifndef RTWTYPES_H
@@ -36,4 +36,8 @@
 #include "tmwtypes.h"
 #endif
 
-/* End of code generation (rtwtypes.h) */
+/*
+ * File trailer for rtwtypes.h
+ *
+ * [EOF]
+ */

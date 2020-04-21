@@ -122,7 +122,7 @@ find_library(SHAHAR
     NAMES mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_flat_tbb mwbwlookup_tbb mwippreconstruct mwipp mwmorphop_flat_tbb  nppicc opencv_cudaarithm opencv_flann nppicom opencv_cudabgsegm opencv_imgproc nppidei opencv_cudafeatures2d opencv_ml nppif opencv_cudafilters opencv_objdetect nppig opencv_cudaimgproc opencv_video nppim opencv_cudalegacy stdc++ nppist opencv_cudaobjdetect tbbmalloc nppisu opencv_cudaoptflow tbb 
     HINTS "/home/sload/ws/catkin_ws/src/innovper/lib"
 )
-add_executable(innov_pose src/posepublisher.cpp src/SmartLoader.cpp src/rtGetInf.cpp  src/rt_nonfinite.cpp  src/SmartLoader_emxutil.cpp src/rtGetNaN.cpp)
+add_executable(innov_pose src/posepublisher.cpp src/PerceptionSmartLoader.cpp src/PerceptionSmartLoader_emxutil.cpp)
 
 
 target_link_libraries(innov_pose  mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_flat_tbb gomp ${catkin_LIBRARIES} )
