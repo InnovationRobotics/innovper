@@ -84,9 +84,9 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     // Print the size of the preloaded buffers 
    std::vector<float> xyz, x,y,z,intensity;
    auto numPoints = pc.height * pc.width;
-   auto isWorkWithFSdata = true;
+   auto isWorkingWithFSdata = false;
 
-    if (!isWorkWithFSdata)
+    if (!isWorkingWithFSdata)
     {  
         x.reserve(numPoints);
         y.reserve(numPoints);
@@ -111,7 +111,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
             }
         }
             // TODO: save to file system 
-        printf("size of intensity vector %d", intensity.size());
+        printf("size of intensity vector %d, x %d, y %d, z 5d, xyz %d", intensity.size(), x.size(), y.size(), z.size(), xyz.size());
     }
     else 
     {
@@ -122,10 +122,12 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     printf("\nnumPoints = %d\n", numPoints);
 
 #ifdef SAVE_LOGS
+    // printf("x.size=%d", x.size());
     if (x.size() > 0)
     {
         static int counter = 0;
-        std::string dummyString, st, path = "/home/sload/Downloads/temp/1/";
+        /*** Note that the path for saving file is hardcoded in BinaryIO.h***/
+        std::string dummyString, st, path = "/home/sload/Downloads/temp/3/";
 
         //st = path + "x" + std::to_string(counter) + ".bin";
         st = path + "x" + std::to_string(counter);
@@ -168,7 +170,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 	int heightMap_res_size[2] = { 0,0 };
 
     printf("\nBefore SmartLoader call\n");
-    if (isWorkWithFSdata)
+    if (isWorkingWithFSdata)
     {
         SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzData[0], xyz_size,
          (double*)&intensityData[0], intensity_size,
@@ -179,7 +181,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         SmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzDouble[0], xyz_size, (double*)&intensityDouble[0], intensity_size,
         &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
     }
-    printf("\nAfter SmartLoader call\n");
+    //printf("\nAfter SmartLoader call\n");
     
     printf("\nSmart loader status %d\nMap Size %d %d\n", smartLoaderStruct.status, 
         heightMap_res_size[0], heightMap_res_size[1]);
@@ -201,9 +203,9 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     // gmap.info.header.seq = pose.header.seq;
     gmap.info.header.stamp = ros::Time::now();
 
-    printf("\nPrint1\n");
+   // printf("\nPrint1\n");
 
-    if (isWorkWithFSdata) 
+    if (isWorkingWithFSdata) 
     {
         gmap.info.resolution = 0.1; 
         gmap.info.length_x = 10;
@@ -326,7 +328,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         gmap.data.push_back(float32MultiArray);
     }
 
-    printf("\nPrint2\n");
+    //printf("\nPrint2\n");
 
     // Row start index (default 0).
     gmap.inner_start_index = 0;
@@ -384,11 +386,11 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         sh_pose.pose.covariance[0] = 0;
     }
 
-    printf("\nPrint3\n");
+    //printf("\nPrint3\n");
     sh_pub.publish(sh_pose);
-    printf("\nPrint4\n");
+    //printf("\nPrint4\n");
     p_pub.publish(pose);
-    printf("\nPrint5\n");
+   // printf("\nPrint5\n");
 
     if (1) 
     {
@@ -400,7 +402,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     printf("\nmap seq %d\n", gmap.info.header.seq);
 
     m_pub.publish(gmap);
-    printf("\nPrint6\n");
+    //printf("\nPrint6\n");
 }
 
 
