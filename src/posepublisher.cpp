@@ -98,42 +98,38 @@ const char* GetPerceptionSmartLoaderStatusString(PerceptionSmartLoaderReturnValu
 }
 
 
+std::vector<double> globalxyz, globalIntensity;
+
 void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 {
    ROS_INFO("Got Point Cloud message %x, %d", &pc, pc.header.seq);
    //onPoseSet(0.968507917975, -4.61491396765, 1);
 
     // Print the size of the preloaded buffers 
-   std::vector<float> xyz, x,y,z,intensity;
+   globalxyz.resize(0);
+   globalIntensity.resize(0);
+
    auto numPoints = pc.height * pc.width;
    auto isWorkingWithFSdata = false;
 
     if (!isWorkingWithFSdata)
     {  
-        x.reserve(numPoints);
-        y.reserve(numPoints);
-        z.reserve(numPoints);
-        xyz.reserve(numPoints);
-        intensity.reserve(numPoints);
+        globalxyz.reserve(numPoints);
+        globalIntensity.reserve(numPoints);
 
         for (auto j = 0; j < pc.height; j++)
         {
             for (auto i = 0; i < pc.width; i++)
             {
                 auto loc = j * pc.row_step + i * pc.point_step;
-                // float *xCorPtr = *((float*)&pc.data[loc]);
-                x.push_back(*((float*)&pc.data[loc]));
-                y.push_back(*((float*)&pc.data[loc + 4]));
-                z.push_back(*((float*)&pc.data[loc + 8]));
 
-                xyz.push_back(*((float*)&pc.data[loc]));
-                xyz.push_back(*((float*)&pc.data[loc + 4]));
-                xyz.push_back(*((float*)&pc.data[loc + 8]));
-                intensity.push_back(*((float*)&pc.data[loc + 12]));    
+                globalxyz.push_back(double(*((float*)&pc.data[loc])));
+                globalxyz.push_back(double(*((float*)&pc.data[loc + 4])));
+                globalxyz.push_back(double(*((float*)&pc.data[loc + 8])));
+                globalIntensity.push_back(double(*((float*)&pc.data[loc + 12])));    
             }
         }
-            // TODO: save to file system 
-        printf("size of intensity vector %d, x %d, y %d, z %d, xyz %d", intensity.size(), x.size(), y.size(), z.size(), xyz.size());
+        //printf("size of intensity vector %d, x %d, y %d, z %d, xyz %d", intensity.size(), x.size(), y.size(), z.size(), xyz.size());
     }
     else 
     {
@@ -141,29 +137,17 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         printf("\nintensity loaded size %d\n", intensityWidth * intensityHeight );
         numPoints = intensityWidth * intensityHeight;
     }
-    printf("\nnumPoints = %d\n", numPoints);
+    //printf("\nnumPoints = %d\n", numPoints);
 
-#define SAVE_LOGS
+// #define SAVE_LOGS 
 #ifdef SAVE_LOGS
     // printf("x.size=%d", x.size());
-    if (x.size() > 0)
+    if (xyz.size() > 0)
     {
         static int counter = 0;
         /*** Note that the path for saving file is hardcoded in BinaryIO.h***/
-        std::string dummyString, st, path = "/home/sload/Downloads/temp/3/";
-
-        //st = path + "x" + std::to_string(counter) + ".bin";
-        st = path + "x" + std::to_string(counter);
-        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&x[0], 1, sizeof(float), x.size(), 1, std::to_string(counter) + "x");
-
-        st = path + "y" + std::to_string(counter) + ".bin";
-        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&y[0], 1, sizeof(float), y.size(), 1, std::to_string(counter) + "y");
-
-        st = path + "z" + std::to_string(counter) + ".bin";
-        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&z[0], 1, sizeof(float), z.size(), 1, std::to_string(counter) + "z");
-
-        st = path + "intensity_" + std::to_string(counter) + ".bin";
-        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&intensity[0], 1, sizeof(float), intensity.size(), 1, "i");
+        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&xyz[0], 1, sizeof(float), xyz.size()/3, 3, std::to_string(counter) + "xyz");
+        IAIRoboticsAlgorithms::BinaryIO::WriteBinary(&intensity[0], 1, sizeof(float), intensity.size(), 1, std::to_string(counter) + "i");
     }
 #endif    
     // TODO: apply the algorithm
@@ -174,25 +158,15 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     auto& configParams = *(globalDataToCallbackFunction.configParams);
     configParams.timeTagMs = pc.header.stamp.nsec * 1000 * 1000;
 
-
-    // uint64_t toNSec() const {return static_cast<uint64_t>(sec)*1000000000ull + static_cast<uint64_t>(nsec); }
-    // T& fromNSec(uint64_t t);
-    
-    // double toSec()  const { return static_cast<double>(sec) + 1e-9*static_cast<double>(nsec); };
-    // T& fromSec(double t);
-
     int xyz_size[2] = { numPoints, 3 }, intensity_size[2] = { numPoints, 1 };
 	
-    std::vector<double> xyzDouble(xyz.begin(), xyz.end());
-    std::vector<double> intensityDouble(intensity.begin(), intensity.end());
-
     PerceptionSmartLoaderStruct smartLoaderStruct;
 
     std::vector<float> heightMap_res_data;
 	heightMap_res_data.resize(1024 * 1024);
 	int heightMap_res_size[2] = { 0,0 };
 
-    printf("\nBefore SmartLoader call\n");
+    // printf("\nBefore SmartLoader call\n");
     if (isWorkingWithFSdata)
     {
         // PerceptionSmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzData[0], xyz_size,
@@ -202,15 +176,14 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     else 
     {
         PerceptionSmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, 
-            (double*)&xyzDouble[0], xyz_size, (double*)&intensityDouble[0], intensity_size,
+            (double*)&globalxyz[0], xyz_size, (double*)&globalIntensity[0], intensity_size,
             &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
     }
     //printf("\nAfter SmartLoader call\n");
     
-    printf("\nSmart loader status %s\nMap Size %d %d\n", 
-        GetPerceptionSmartLoaderStatusString(smartLoaderStruct.status), 
-        heightMap_res_size[0], heightMap_res_size[1]);
+    printf("Smart loader status %s\tMap Size %d %d\n", GetPerceptionSmartLoaderStatusString(smartLoaderStruct.status), heightMap_res_size[0], heightMap_res_size[1]);
     
+    // @Shahar - what are these used for? 
     static tf::TransformBroadcaster br;
     tf::Transform transform;
     transform.setOrigin( tf::Vector3(0.0, 0.0, 0.0) );
@@ -227,8 +200,6 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     gmap.info.header.frame_id = second_fixed_frame;
     // gmap.info.header.seq = pose.header.seq;
     gmap.info.header.stamp = ros::Time::now();
-
-   // printf("\nPrint1\n");
 
     if (isWorkingWithFSdata) 
     {
@@ -285,85 +256,94 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         // }
 
         gmap.data.push_back(float32MultiArray);
-
-        // // TODO: Shahar  // TODO: shshar
-        // gmap.info.resolution = 0.1; 
-
-        // // TODO: shshar x,y directions 
-        // // TODO: shshar
-        // gmap.info.length_x = 10;
-        // // TODO: shshar
-        // gmap.info.length_y = 10;
-        // memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
-        // memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
-        // gmap.info.pose.position.x = 5;
-        // gmap.info.pose.position.y = 5;
-
-        // if (heightMap_res_size[0] * heightMap_res_size[1] > 0)
-        // {
-        //     gmap.layers.push_back(std::string("smartload"));
-        //     gmap.data.resize(heightMap_res_size[0] * heightMap_res_size[1]);
-        //     memcpy(&gmap.data[0], &heightMap_res_data[0], sizeof(float) * heightMap_res_size[0] * heightMap_res_size[1]);
-        // }
-        // else 
-        // {
-        //     gmap.layers.push_back(std::string("smartload"));
-        //     gmap.data.resize(1024 * 1024);
-        //     memset(&gmap.data[0], 0x00, 1024 * 1024 * sizeof(float));
-        // }
     }
-    else 
+    else if (smartLoaderStruct.heightMapStatus)
     {
-        gmap.info.resolution = 0.1; 
-        gmap.info.length_x = 100;
-        gmap.info.length_y = 100;
+        
+        // # Resolution of the grid [m/cell].
+        gmap.info.resolution = configParams.heightMapResolutionMeterToPixel; 
+        // # Length in x-direction [m].
+        gmap.info.length_x = heightMap_res_size[1] * configParams.heightMapResolutionMeterToPixel;
+        // # Length in y-direction [m].
+        gmap.info.length_y = heightMap_res_size[0] * configParams.heightMapResolutionMeterToPixel;
+   
+
+        // # Pose of the grid map center in the frame defined in `header` [m].
         memset(&gmap.info.pose.orientation, 0x00, sizeof(gmap.info.pose.orientation));
         memset(&gmap.info.pose.position, 0x00, sizeof(gmap.info.pose.position));
+
+        //# Grid map basic layer names (optional). The basic layers
+        //# determine which layers from `layers` need to be valid
+        //# in order for a cell of the grid map to be valid.
         gmap.basic_layers.push_back(std::string("smartloadMap"));
+
+        // # Grid map layer names.
         gmap.layers.push_back(std::string("smartloadMap"));
-        // gmap.data.resize(gmap.info.length_x * gmap.info.resolution 
-        //     * gmap.info.length_y * gmap.info.resolution);
-        int numElements = gmap.info.length_x / gmap.info.resolution 
-             * gmap.info.length_y / gmap.info.resolution;
-        
+
+//         # Accessors should ALWAYS be written in terms of dimension stride
+// # and specified outer-most dimension first.
+// # 
+// # multiarray(i,j,k) = data[data_offset + dim_stride[1]*i + dim_stride[2]*j + k]
+// #
+// # A standard, 3-channel 640x480 image with interleaved color channels
+// # would be specified as:
+// #
+// # dim[0].label  = "height"
+// # dim[0].size   = 480
+// # dim[0].stride = 3*640*480 = 921600  (note dim[0] stride is just size of image)
+// # dim[1].label  = "width"
+// # dim[1].size   = 640
+// # dim[1].stride = 3*640 = 1920
+// # dim[2].label  = "channel"
+// # dim[2].size   = 3
+// # dim[2].stride = 3
+// #
+// # multiarray(i,j,k) refers to the ith row, jth column, and kth channel.
+
+        // # Array of dimension properties
+        std_msgs::MultiArrayDimension multiArrayDimensionCol,multiArrayDimensionRow;
+
+        // rvis naming
+        //multiArrayDimensionCol.label = std::string("column_index");
+        multiArrayDimensionCol.label = std::string("width");
+        multiArrayDimensionCol.size = heightMap_res_size[1];
+        multiArrayDimensionCol.stride = multiArrayDimensionCol.size * sizeof(float);
+
+        // rvis naming
+        //multiArrayDimensionRow.label = std::string("row_index");
+        multiArrayDimensionRow.label = std::string("height");
+        multiArrayDimensionRow.size = heightMap_res_size[0];
+        multiArrayDimensionRow.stride = multiArrayDimensionCol.size * multiArrayDimensionRow.size * sizeof(float); 
+       
+        // # specification of data layout
+
+        // # The multiarray declares a generic multi-dimensional array of a
+        // # particular data type.  Dimensions are ordered from outer most
+        // # to inner most.
+        // # Grid map data.
         std_msgs::Float32MultiArray float32MultiArray; 
 
-        // MultiArrayLayout 
-        std_msgs::MultiArrayDimension multiArrayDimensionCol,multiArrayDimensionRow;
-        multiArrayDimensionCol.label = std::string("column_index");
-        multiArrayDimensionCol.size = gmap.info.length_x / gmap.info.resolution;
-        multiArrayDimensionCol.stride = sizeof(float); 
-
-        multiArrayDimensionRow.label = std::string("row_index");
-        multiArrayDimensionRow.size = gmap.info.length_y / gmap.info.resolution;
-        multiArrayDimensionRow.stride = multiArrayDimensionCol.size * sizeof(float); 
-
-        float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
+        // Shahar order
         float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
-        
+        float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
+        // rvis order        
+        //float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
+        //float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
+
         float32MultiArray.layout.data_offset = 0;
 
-        float32MultiArray.data.resize(numElements);
-        for (int i = 0; i < numElements; i++)
-        {
-            float32MultiArray.data.push_back(rand());
-            //float32MultiArray.data.push_back(0.1 * i);
-        }
+        auto sz = heightMap_res_size[0] * heightMap_res_size[1];
+        float32MultiArray.data.resize(sz);
+
+        memcpy(&(float32MultiArray.data[0]), &(heightMap_res_data[0]), size_t(sz * sizeof(float)));
 
         gmap.data.push_back(float32MultiArray);
+
+        // Row start index (default 0).
+        gmap.inner_start_index = 0;
+        // Column start index (default 0).
+        gmap.outer_start_index = 0;
     }
-
-    //printf("\nPrint2\n");
-
-    // Row start index (default 0).
-    gmap.inner_start_index = 0;
-    // Column start index (default 0).
-    gmap.outer_start_index = 0;
-
-    // , heightMap_res_size
-    // gmap.layers[0] ="smartload";
-    //gmap.layers
-
 
     //Topic localization of the vehicle
     std::string fixed_frame = "/base_link";
@@ -375,7 +355,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     // TODO : memset all ros topics before usage --> TOOD Michele 
 
     // tood = shshar chagne to loader status - TOOD 
-    if (smartLoaderStruct.status)
+    if (smartLoaderStruct.loaderLocStatus)
     {
         pose.pose.pose.position.x = smartLoaderStruct.loaderLoc[0];
         pose.pose.pose.position.y = smartLoaderStruct.loaderLoc[1];
@@ -387,18 +367,23 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         // TOOD Michele  
         pose.pose.covariance[0] = 0;
     }
-    printf("\nLoader location (x=%f, y=%f, z=%f)\n", 
+
+    bool isPrintVersion = false;
+    if (isPrintVersion)
+    {
+        printf("\nLoader location (x=%f, y=%f, z=%f)\n", 
         smartLoaderStruct.loaderLoc[0], smartLoaderStruct.loaderLoc[1], smartLoaderStruct.loaderLoc[2]);
     
-    printf("\nShovel location (x=%f, y=%f, z=%f)\n", 
+        printf("\nShovel location (x=%f, y=%f, z=%f)\n", 
         smartLoaderStruct.shovelLoc[0], smartLoaderStruct.shovelLoc[1], smartLoaderStruct.shovelLoc[2]);
-
+    }
+    
     //Topic localization of the shovel
     //std::string fixed_frame = "/base_link";
     sh_pose.header.frame_id = fixed_frame;
     sh_pose.header.stamp = gmap.info.header.stamp;
 
-    if (smartLoaderStruct.status)
+    if (smartLoaderStruct.shovelLocStatus)
     {
         sh_pose.pose.pose.position.x = smartLoaderStruct.shovelLoc[0];
         sh_pose.pose.pose.position.y = smartLoaderStruct.shovelLoc[1];
@@ -424,43 +409,22 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         gmap.info.header.seq = counterTemp++;
     }
 
-    printf("\nmap seq %d\n", gmap.info.header.seq);
-
+    // printf("\nmap seq %d\n", gmap.info.header.seq);
     m_pub.publish(gmap);
     //printf("\nPrint6\n");
 }
 
 
-void GetPerceptionConfig(PerceptionSmartLoaderConfigParam& configParams)
+void SetDefaultSmartLoaderConfigParams(PerceptionSmartLoaderConfigParam& configParams)
 {
     memset(&configParams, 0x00, sizeof(configParams));
 	configParams.timeTagMs = 1;
 
-	configParams.planeModelParameters[0] = 0.00110673982744076;
-	configParams.planeModelParameters[1] = -0.0110968341035824;
-	configParams.planeModelParameters[2] = 0.999937815766476;
-	configParams.planeModelParameters[3] = 0.0883062285706899;
 	configParams.maxDistanceToPlaneMeter = 0.04;
-	configParams.pcAlignmentProjMat[0] = -0.0523359562429438;
-	configParams.pcAlignmentProjMat[1] = -0.998629534754574;
-	configParams.pcAlignmentProjMat[2] = 0;
-	configParams.pcAlignmentProjMat[3] = 2.01807360260713;
-	configParams.pcAlignmentProjMat[4] = 0;
-	configParams.pcAlignmentProjMat[5] = 0;
-	configParams.pcAlignmentProjMat[6] = -1;
-	configParams.pcAlignmentProjMat[7] = 0.788678396529591;
-	configParams.pcAlignmentProjMat[8] = 0.998629534754574;
-	configParams.pcAlignmentProjMat[9] = -0.0523359562429438;
-	configParams.pcAlignmentProjMat[10] = 0;
-	configParams.pcAlignmentProjMat[11] = 2.75633839020317;
-
-	double xyzLimits[6]= { 0, 5, 0, 1.50000000000000, -0.500000000000000, 0.500000000000000 };
-	memcpy(configParams.xyzLimits, xyzLimits, sizeof(configParams.xyzLimits));
-
 	configParams.minNumPointsInPc = 64;
 	configParams.minimumDistanceFromLoaderToPlaneMeter = 0.2;
 	configParams.minPointsForReflector = 5;
-	configParams.maximumTimeTagDiffMs = 3000;
+	configParams.maximumTimeTagDiffMs = 1000;
 	configParams.minimumIntensityReflectorValue = 100;
 	configParams.loaderReflectorDiameterMeter = 0.18;
 	configParams.loaderWhiteHatMeter = 0.15;
@@ -479,6 +443,21 @@ void GetPerceptionConfig(PerceptionSmartLoaderConfigParam& configParams)
 	configParams.loaderToShovelYawAngleSmoothWeight = 0.6;
 
 	configParams.debugMode = false;
+
+    {
+		double planeModelParameters[4] = { 0.0090749003000000008634096104742638999596238136291503906250000000,0.0167408289999999987385237432135909330099821090698242187500000000,0.9998186799999999596622046738048084080219268798828125000000000000,-0.0239179950000000009213696472443189122714102268218994140625000000 };
+		memcpy(&configParams.planeModelParameters[0], planeModelParameters, sizeof(planeModelParameters));
+	}
+
+	{
+		double pcAlignmentProjMat[12] = { -0.0523359562429437999431236505643028067424893379211425781250000000,0.9986295347545740552774873322050552815198898315429687500000000000,0.0000000000000000064093061293237101741858507329833845334833240759,1.3367783418562400044038440682925283908843994140625000000000000000,-0.0000000000000001224646799147350002426336569097937119478395663359,0.0000000000000000000000000000000000000000000000000000000000000000,-1.0000000000000000000000000000000000000000000000000000000000000000,0.8069977760314940296026975374843459576368331909179687500000000000,-0.9986295347545740552774873322050552815198898315429687500000000000,-0.0523359562429437999431236505643028067424893379211425781250000000,0.0000000000000001222968463271199898913999796741335001694767059804,2.6988332719881098498149185616057366132736206054687500000000000000 };
+		memcpy(&configParams.pcAlignmentProjMat[0], pcAlignmentProjMat, sizeof(pcAlignmentProjMat));
+	}
+	
+	{
+		double xyzLimits[6] = { 0.0000000000000000000000000000000000000000000000000000000000000000,2.6000000000000000888178419700125232338905334472656250000000000000,0.0000000000000000000000000000000000000000000000000000000000000000,1.6000000000000000888178419700125232338905334472656250000000000000,-0.2999999999999999888977697537484345957636833190917968750000000000,1.0000000000000000000000000000000000000000000000000000000000000000 };
+		memcpy(configParams.xyzLimits, xyzLimits, sizeof(configParams.xyzLimits));
+	}
 }
 
 
@@ -486,7 +465,7 @@ int main(int argc, char** argv)
 {
     // Initialize perception code
     PerceptionSmartLoaderConfigParam configParams;
-    GetPerceptionConfig(configParams);
+    SetDefaultSmartLoaderConfigParams(configParams);
     auto SD = std::make_unique<PerceptionSmartLoaderStackData>();
 	auto pd = std::make_unique<PerceptionSmartLoaderPersistentData>();
 	SD->pd = pd.get();
