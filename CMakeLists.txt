@@ -13,6 +13,26 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   tf
+  grid_map_core
+  grid_map_ros
+  grid_map_cv
+  grid_map_filters
+  grid_map_loader
+  grid_map_msgs
+  grid_map_octomap
+  grid_map_rviz_plugin
+  grid_map_visualization
+  geometry_msgs
+  sensor_msgs
+  cv_bridge
+  octomap_msgs
+  filters
+)
+
+find_package(OpenCV REQUIRED
+  COMPONENTS
+  opencv_highgui
+  CONFIG
 )
 
 ## System dependencies are found with CMake's conventions
@@ -111,17 +131,22 @@ catkin_package(
 ## Build ##
 ###########
 
-add_executable(innovper src/publisher.cpp)
-target_link_libraries(innovper ${catkin_LIBRARIES})
-#add_dependencies(innovper innovper_generate_messages_cpp)
-#list(APPEND CMAKE_PREFIX_PATH "/home/sload/ws/catkin_ws/src/innovper/lib")
-
-link_directories("/home/sload/ws/catkin_ws/src/innovper/lib" "/usr/lib/x86-64-linux-gnu")
-
-find_library(SHAHAR
-    NAMES mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_flat_tbb mwbwlookup_tbb mwippreconstruct mwipp mwmorphop_flat_tbb  nppicc opencv_cudaarithm opencv_flann nppicom opencv_cudabgsegm opencv_imgproc nppidei opencv_cudafeatures2d opencv_ml nppif opencv_cudafilters opencv_objdetect nppig opencv_cudaimgproc opencv_video nppim opencv_cudalegacy stdc++ nppist opencv_cudaobjdetect tbbmalloc nppisu opencv_cudaoptflow tbb 
-    HINTS "/home/sload/ws/catkin_ws/src/innovper/lib"
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
+include_directories(
+  include
+  ${catkin_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIR}
 )
+
+
+#add_executable(innovper src/publisher.cpp)
+#target_link_libraries(innovper ${catkin_LIBRARIES})
+
+
+link_directories("lib" "/usr/lib/x86-64-linux-gnu")
+#link_directories("/home/sload/git/ws/src/innovper/lib" "/usr/lib/x86-64-linux-gnu")
+
 add_executable(innov_pose src/posepublisher.cpp src/PerceptionSmartLoader.cpp src/PerceptionSmartLoader_emxutil.cpp)
 
 
@@ -130,12 +155,7 @@ target_link_libraries(innov_pose  mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_f
 add_executable(innov_example src/example.cpp)
 target_link_libraries(innov_example ${catkin_LIBRARIES})
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
-)
+
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}

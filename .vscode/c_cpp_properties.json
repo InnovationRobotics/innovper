@@ -4,6 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
+                "/home/sload/git/ws/src/",
+                "/home/sload/git/ws/src/grid_map",
                 "/opt/ros/melodic/include"
             ],
             "defines": [],

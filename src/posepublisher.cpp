@@ -2,26 +2,34 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <grid_map_msgs/GridMap.h>
+#include <grid_map_ros/grid_map_ros.hpp>
+#include <grid_map_cv/grid_map_cv.hpp>
+#include <cv_bridge/cv_bridge.h>
 //#include <grid_map_msgs/GridMapInfo.h>
 #include <tf/transform_broadcaster.h>
 #include <std_msgs/Float32MultiArray.h>
 #include "BinaryIO.h"
 #include "PerceptionSmartLoader.h"
 
+using namespace grid_map;
+using namespace ros;
 
 //double pose(int flag);
 geometry_msgs::PoseWithCovarianceStamped pose, sh_pose;
 sensor_msgs::PointCloud2 pcloud;
 grid_map_msgs::GridMap gmap;
+grid_map_msgs::GridMap message;
 
 ros::Publisher p_pub, m_pub, sh_pub;
-
+ros::Time thistime;
 std::string datasetPath = "/home/sload/Downloads/WorkingVerForUTWindows/SmartLoader/SmartLoaderDataset/Test2/";
 std::string xyzPath = "xyz$$c1_d_w3_h17235.bin", intensityPath = "intensity$$c1_d_w1_h17235.bin";
 int xyzNumBands, xyzNumBytePerBand, xyzWidth, xyzHeight;
 std::vector<unsigned char> xyzData;
 int intensityNumBands, intensityNumBytePerBand, intensityWidth, intensityHeight;
 std::vector<unsigned char> intensityData;
+
+GridMap globalMap({"original", "elevation"});
 
 struct DataToCallbackFunction
 {
@@ -102,7 +110,7 @@ std::vector<double> globalxyz, globalIntensity;
 
 void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 {
-   ROS_INFO("Got Point Cloud message %x, %d", &pc, pc.header.seq);
+   ROS_DEBUG("Got Point Cloud message %x, %d", &pc, pc.header.seq);
    //onPoseSet(0.968507917975, -4.61491396765, 1);
 
     // Print the size of the preloaded buffers 
@@ -133,8 +141,8 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     }
     else 
     {
-        printf("\nxyz loaded size %d\n", xyzHeight * xyzWidth );
-        printf("\nintensity loaded size %d\n", intensityWidth * intensityHeight );
+        ROS_DEBUG("\nxyz loaded size %d\n", xyzHeight * xyzWidth );
+        ROS_DEBUG("\nintensity loaded size %d\n", intensityWidth * intensityHeight );
         numPoints = intensityWidth * intensityHeight;
     }
     //printf("\nnumPoints = %d\n", numPoints);
@@ -169,9 +177,9 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     // printf("\nBefore SmartLoader call\n");
     if (isWorkingWithFSdata)
     {
-        // PerceptionSmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzData[0], xyz_size,
-        //  (double*)&intensityData[0], intensity_size,
-        // &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
+        PerceptionSmartLoader(globalDataToCallbackFunction.SD->get(), &configParams, (double*)&xyzData[0], xyz_size,
+         (double*)&intensityData[0], intensity_size,
+         &smartLoaderStruct, &heightMap_res_data[0], heightMap_res_size);
     }
     else 
     {
@@ -181,7 +189,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     }
     //printf("\nAfter SmartLoader call\n");
     
-    printf("Smart loader status %s\tMap Size %d %d\n", GetPerceptionSmartLoaderStatusString(smartLoaderStruct.status), heightMap_res_size[0], heightMap_res_size[1]);
+    ROS_WARN("Smart loader status %s\tMap Size %d %d\n", GetPerceptionSmartLoaderStatusString(smartLoaderStruct.status), heightMap_res_size[0], heightMap_res_size[1]);
     
     // @Shahar - what are these used for? 
     static tf::TransformBroadcaster br;
@@ -193,14 +201,7 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "base_link"));
     br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "world", "map"));
     
-    
-    //Build GMap topic
-    // Grid Map
-    std::string second_fixed_frame = "/map";
-    gmap.info.header.frame_id = second_fixed_frame;
-    // gmap.info.header.seq = pose.header.seq;
-    gmap.info.header.stamp = ros::Time::now();
-
+    thistime = ros::Time::now();
     if (isWorkingWithFSdata) 
     {
         gmap.info.resolution = 0.1; 
@@ -259,7 +260,16 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     }
     else if (smartLoaderStruct.heightMapStatus)
     {
-        
+//#define SHAHARLOOHEV
+#ifdef SHAHARLOOHEV
+ 
+    //Build GMap topic
+    // Grid Map
+    std::string second_fixed_frame = "/map";
+    gmap.info.header.frame_id = second_fixed_frame;
+    // gmap.info.header.seq = pose.header.seq;
+    gmap.info.header.stamp = ros::Time::now();
+
         // # Resolution of the grid [m/cell].
         gmap.info.resolution = configParams.heightMapResolutionMeterToPixel; 
         // # Length in x-direction [m].
@@ -300,56 +310,69 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
 // #
 // # multiarray(i,j,k) refers to the ith row, jth column, and kth channel.
 
-        // # Array of dimension properties
-        std_msgs::MultiArrayDimension multiArrayDimensionCol,multiArrayDimensionRow;
+    // # Array of dimension properties
+    std_msgs::MultiArrayDimension multiArrayDimensionCol,multiArrayDimensionRow;
 
-        // rvis naming
-        //multiArrayDimensionCol.label = std::string("column_index");
-        multiArrayDimensionCol.label = std::string("width");
-        multiArrayDimensionCol.size = heightMap_res_size[1];
-        multiArrayDimensionCol.stride = multiArrayDimensionCol.size * sizeof(float);
+    // rvis naming
+    //multiArrayDimensionCol.label = std::string("column_index");
+    multiArrayDimensionCol.label = std::string("width");
+    multiArrayDimensionCol.size = heightMap_res_size[1];
+    multiArrayDimensionCol.stride = multiArrayDimensionCol.size * sizeof(float);
 
-        // rvis naming
-        //multiArrayDimensionRow.label = std::string("row_index");
-        multiArrayDimensionRow.label = std::string("height");
-        multiArrayDimensionRow.size = heightMap_res_size[0];
-        multiArrayDimensionRow.stride = multiArrayDimensionCol.size * multiArrayDimensionRow.size * sizeof(float); 
-       
-        // # specification of data layout
+    // rvis naming
+    //multiArrayDimensionRow.label = std::string("row_index");
+    multiArrayDimensionRow.label = std::string("height");
+    multiArrayDimensionRow.size = heightMap_res_size[0];
+    multiArrayDimensionRow.stride = multiArrayDimensionCol.size * multiArrayDimensionRow.size * sizeof(float); 
+    
+    // # specification of data layout
 
-        // # The multiarray declares a generic multi-dimensional array of a
-        // # particular data type.  Dimensions are ordered from outer most
-        // # to inner most.
-        // # Grid map data.
-        std_msgs::Float32MultiArray float32MultiArray; 
+    // # The multiarray declares a generic multi-dimensional array of a
+    // # particular data type.  Dimensions are ordered from outer most
+    // # to inner most.
+    // # Grid map data.
+    std_msgs::Float32MultiArray float32MultiArray; 
 
-        // Shahar order
-        float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
-        float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
-        // rvis order        
-        //float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
-        //float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
+    // Shahar order
+    float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
+    float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
+    // rvis order        
+    //float32MultiArray.layout.dim.push_back(multiArrayDimensionCol);
+    //float32MultiArray.layout.dim.push_back(multiArrayDimensionRow);
 
-        float32MultiArray.layout.data_offset = 0;
+    float32MultiArray.layout.data_offset = 0;
 
-        auto sz = heightMap_res_size[0] * heightMap_res_size[1];
-        float32MultiArray.data.resize(sz);
+    auto sz = heightMap_res_size[0] * heightMap_res_size[1];
+    float32MultiArray.data.resize(sz);
 
-        memcpy(&(float32MultiArray.data[0]), &(heightMap_res_data[0]), size_t(sz * sizeof(float)));
+    memcpy(&(float32MultiArray.data[0]), &(heightMap_res_data[0]), size_t(sz * sizeof(float)));
 
-        gmap.data.push_back(float32MultiArray);
+    gmap.data.push_back(float32MultiArray);
 
-        // Row start index (default 0).
-        gmap.inner_start_index = 0;
-        // Column start index (default 0).
-        gmap.outer_start_index = 0;
+    // Row start index (default 0).
+    gmap.inner_start_index = 0;
+    // Column start index (default 0).
+    gmap.outer_start_index = 0;
+#else
+    // Create grid map.
+    
+    globalMap.setTimestamp(thistime.toNSec());
+
+    cv::Mat heightMap(heightMap_res_size[0], heightMap_res_size[1], CV_32FC1, &(heightMap_res_data[0]));
+    GridMapCvConverter::addLayerFromImage<float, 1>(heightMap, "elevation", globalMap, configParams.xyzLimits[5], configParams.xyzLimits[6]);
+
+    // Publish grid map.
+    GridMapRosConverter::toMessage(globalMap, message);
+    //m_pub.publish(message);
+
+
+#endif
     }
 
     //Topic localization of the vehicle
     std::string fixed_frame = "/base_link";
     pose.header.frame_id = fixed_frame;
-    pose.header.stamp = gmap.info.header.stamp;
-
+    pose.header.stamp = thistime;
     // set x,y coord
 
     // TODO : memset all ros topics before usage --> TOOD Michele 
@@ -371,10 +394,10 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
     bool isPrintVersion = false;
     if (isPrintVersion)
     {
-        printf("\nLoader location (x=%f, y=%f, z=%f)\n", 
+        ROS_DEBUG("\nLoader location (x=%f, y=%f, z=%f)\n", 
         smartLoaderStruct.loaderLoc[0], smartLoaderStruct.loaderLoc[1], smartLoaderStruct.loaderLoc[2]);
     
-        printf("\nShovel location (x=%f, y=%f, z=%f)\n", 
+        ROS_DEBUG("\nShovel location (x=%f, y=%f, z=%f)\n", 
         smartLoaderStruct.shovelLoc[0], smartLoaderStruct.shovelLoc[1], smartLoaderStruct.shovelLoc[2]);
     }
     
@@ -396,12 +419,14 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         sh_pose.pose.covariance[0] = 0;
     }
 
-    //printf("\nPrint3\n");
+    //ROS_DEBUG("\nPrint3\n");
     sh_pub.publish(sh_pose);
-    //printf("\nPrint4\n");
+    //ROS_DEBUG("\nPrint4\n");
     p_pub.publish(pose);
-   // printf("\nPrint5\n");
+   // ROS_DEBUG("\nPrint5\n");
 
+
+#ifdef SHAHARLOOHEV
     if (1) 
     {
         gmap.info.header.seq = pose.header.seq;
@@ -409,9 +434,13 @@ void dealWithPCloudCB(sensor_msgs::PointCloud2 pc)
         gmap.info.header.seq = counterTemp++;
     }
 
-    // printf("\nmap seq %d\n", gmap.info.header.seq);
+    ROS_DEBUG("\nmap seq %d\n", gmap.info.header.seq);
     m_pub.publish(gmap);
-    //printf("\nPrint6\n");
+    ROS_DEBUG("\nPrint6\n");
+#else
+    m_pub.publish(message);
+    ROS_INFO_THROTTLE(1.0, "Grid map (timestamp %f) published.", message.info.header.stamp.toSec());
+#endif
 }
 
 
@@ -471,6 +500,14 @@ int main(int argc, char** argv)
 	SD->pd = pd.get();
 
 	PerceptionSmartLoader_initialize(SD.get());
+
+    globalMap.setFrameId("map");
+    globalMap.setGeometry(Length(configParams.xyzLimits[1] - configParams.xyzLimits[0], 
+    configParams.xyzLimits[3] - configParams.xyzLimits[2]), configParams.heightMapResolutionMeterToPixel);
+    ROS_INFO("Created map with size %f x %f m (%i x %i cells).",
+    globalMap.getLength().x(), globalMap.getLength().y(),
+    globalMap.getSize()(0), globalMap.getSize()(1));
+
 
     // setting
     ros::init(argc, argv, "sl_pose");
