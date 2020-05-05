@@ -2,7 +2,7 @@
 // File: PerceptionSmartLoader.cpp
 //
 // MATLAB Coder version            : 4.1
-// C/C++ source code generated on  : 20-Apr-2020 15:35:54
+// C/C++ source code generated on  : 05-May-2020 11:47:28
 //
 
 // Include Files
@@ -24,8 +24,9 @@ static void CalcPlaneToPointDistance(const double planeModelParameters[4], const
   float srcPoints[3], float *distanceFromPointToPlane, boolean_T
   *isPointAbovePlane);
 static void ClusterPoints2D(PerceptionSmartLoaderStackData *SD, float ptr_data[],
-  int ptr_size[2], double maxDistance, cell_wrap_3 clustersXs_data[], int
-  clustersXs_size[2], cell_wrap_3 clustersYs_data[], int clustersYs_size[2]);
+  int ptr_size[2], double maxDistance, cell_wrap_4 clustersXs_data[], int
+  clustersXs_size[2], cell_wrap_4 clustersYs_data[], int clustersYs_size[2],
+  boolean_T *status);
 static void FilterPointCloudAccordingToZdifferences
   (PerceptionSmartLoaderStackData *SD, const float pc_data[], const int pc_size
    [2], double diffThreshold, float pcFiltered_data[], int pcFiltered_size[2]);
@@ -64,12 +65,12 @@ static void b_CalcPlaneToPointDistance(const double planeModelParameters[4],
   *isPointAbovePlane);
 static void b_abs(const float x_data[], const int x_size[1], float y_data[], int
                   y_size[1]);
-static void b_any(const int x_size[2], boolean_T y_data[], int y_size[1]);
 static void b_apply_row_permutation(PerceptionSmartLoaderStackData *SD, float
   y_data[], int y_size[2], const int idx_data[]);
 static int b_bsearch(const float x_data[], const int x_size[1], double xi);
 static void b_bsxfun(const float a_data[], const int a_size[2], const double
                      b_data[], const int b_size[2], float c_data[], int c_size[2]);
+static void b_ceil(double x[2]);
 static void b_cosd(double *x);
 static void b_distfun(float D_data[], const float X_data[], const int X_size[2],
                       const float C[6], const int crows[2], int ncrows);
@@ -83,12 +84,11 @@ static void b_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
   dir_size[2], int n);
 static void b_nestedIter(const float x_data[], const int x_size[2], float
   y_data[], int y_size[1]);
-static double b_norm(const double x[3]);
+static float b_norm(const float x[3]);
 static void b_nullAssignment(double x_data[], int x_size[1]);
 static double b_rand(PerceptionSmartLoaderStackData *SD);
 static void b_repmat(const double a[3], double varargin_1, double b_data[], int
                      b_size[2]);
-static void b_round(float x_data[], int x_size[2]);
 static void b_sind(double *x);
 static void b_sort(creal_T x[2], int idx[2]);
 static void b_sortIdx(PerceptionSmartLoaderStackData *SD, const float x_data[],
@@ -113,10 +113,9 @@ static void c_CalcPlaneToPointDistance(PerceptionSmartLoaderStackData *SD, const
   srcPoints_size[2], float distanceFromPointToPlane_data[], int
   distanceFromPointToPlane_size[1], boolean_T isPointAbovePlane_data[], int
   isPointAbovePlane_size[1]);
-static boolean_T c_any(const boolean_T x_data[], const int x_size[2]);
 static void c_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
   const float x_data[], int n);
-static double c_norm(const double x[2]);
+static double c_norm(const double x[3]);
 static void c_nullAssignment(PerceptionSmartLoaderStackData *SD, float x_data[],
   int x_size[2], const int idx_data[]);
 static void c_sortIdx(float x_data[], int x_size[1], int idx_data[], int
@@ -128,6 +127,7 @@ static void contrib(double x1, double b_y1, double x2, double y2, signed char
                     *diffQuad, boolean_T *onj);
 static int countEmpty(int empties[2], const int counts[2], const int changed[2],
                       int nchanged);
+static double d_norm(const double x[2]);
 static void d_sum(const float x_data[], const int x_size[2], float y_data[], int
                   y_size[1]);
 static void diag(const creal_T v[4], creal_T d[2]);
@@ -194,8 +194,8 @@ static double mpower(double b);
 static void nestedIter(const float x_data[], const int x_size[2], float y_data[],
   int y_size[1]);
 static int nonSingletonDim(const int x_size[1]);
-static void nullAssignment(const cell_wrap_3 x_data[], const boolean_T idx_data[],
-  cell_wrap_3 b_x_data[], int x_size[2]);
+static void nullAssignment(const cell_wrap_4 x_data[], const boolean_T idx_data[],
+  cell_wrap_4 b_x_data[], int x_size[2]);
 static void pdist(const emxArray_real32_T *Xin, emxArray_real32_T *Y);
 static void pdist2(PerceptionSmartLoaderStackData *SD, const emxArray_real32_T
                    *Xin, const float Yin_data[], const int Yin_size[2],
@@ -282,7 +282,7 @@ static void CalcPlaneToPointDistance(const double planeModelParameters[4], const
            planeModelParameters[2]) + (float)planeModelParameters[3];
 
   // 'CalcPlaneToPointDistance:22' distanceFromPointToPlane = abs(temp1) / norm(planeModelParameters(1:3)); 
-  *distanceFromPointToPlane = std::abs(temp1) / (float)b_norm(*(double (*)[3])&
+  *distanceFromPointToPlane = std::abs(temp1) / (float)c_norm(*(double (*)[3])&
     planeModelParameters[0]);
 
   // 'CalcPlaneToPointDistance:24' isPointAbovePlane = temp1 > 0;
@@ -290,42 +290,44 @@ static void CalcPlaneToPointDistance(const double planeModelParameters[4], const
 }
 
 //
-// function [clustersXs, clustersYs] = ClusterPoints2D(ptr, maxDistance)
+// function [clustersXs, clustersYs, status] = ClusterPoints2D(ptr, maxDistance)
 // Cell {end+1} command only works with vectors, not matrices, that's why we changed the output to two different cells
 //  Must set upper bound for cell array compilation
 // Arguments    : PerceptionSmartLoaderStackData *SD
 //                float ptr_data[]
 //                int ptr_size[2]
 //                double maxDistance
-//                cell_wrap_3 clustersXs_data[]
+//                cell_wrap_4 clustersXs_data[]
 //                int clustersXs_size[2]
-//                cell_wrap_3 clustersYs_data[]
+//                cell_wrap_4 clustersYs_data[]
 //                int clustersYs_size[2]
+//                boolean_T *status
 // Return Type  : void
 //
 static void ClusterPoints2D(PerceptionSmartLoaderStackData *SD, float ptr_data[],
-  int ptr_size[2], double maxDistance, cell_wrap_3 clustersXs_data[], int
-  clustersXs_size[2], cell_wrap_3 clustersYs_data[], int clustersYs_size[2])
+  int ptr_size[2], double maxDistance, cell_wrap_4 clustersXs_data[], int
+  clustersXs_size[2], cell_wrap_4 clustersYs_data[], int clustersYs_size[2],
+  boolean_T *status)
 {
   int i11;
   int input_sizes_idx_0;
   int loop_ub;
-  double cellArrayIndex;
+  int cellArrayIndex;
   emxArray_real32_T *distanceMat;
-  cell_wrap_3 reshapes[2];
+  cell_wrap_4 reshapes[2];
   emxArray_real32_T *ex;
   emxArray_int32_T *idx;
-  cell_wrap_3 b_reshapes[2];
-  cell_wrap_3 c_reshapes[2];
+  cell_wrap_4 b_reshapes[2];
+  cell_wrap_4 c_reshapes[2];
   emxArray_real32_T *d_reshapes;
+  int exitg1;
   int m;
   boolean_T empty_non_axis_sizes;
   signed char input_sizes_idx_1;
   int i12;
-  int i13;
   int n;
+  int i13;
   int i14;
-  int i15;
   unsigned int distanceMat_idx_0;
   float minVal_data[1];
   int minInd_data[1];
@@ -340,7 +342,7 @@ static void ClusterPoints2D(PerceptionSmartLoaderStackData *SD, float ptr_data[]
   i11 = clustersXs_size[0] * clustersXs_size[1];
   clustersXs_size[1] = 64;
   clustersXs_size[0] = 1;
-  emxEnsureCapacity_cell_wrap_3(clustersXs_data, clustersXs_size, i11);
+  emxEnsureCapacity_cell_wrap_4(clustersXs_data, clustersXs_size, i11);
 
   // 'ClusterPoints2D:12' for i = 1:SmartLoaderCompilationConstants.MaxNumClusters 
   // 'ClusterPoints2D:13' clustersXs{i} = zeros(0,0,'like', ptr);
@@ -601,7 +603,7 @@ static void ClusterPoints2D(PerceptionSmartLoaderStackData *SD, float ptr_data[]
   i11 = clustersYs_size[0] * clustersYs_size[1];
   clustersYs_size[1] = 64;
   clustersYs_size[0] = 1;
-  emxEnsureCapacity_cell_wrap_3(clustersYs_data, clustersYs_size, i11);
+  emxEnsureCapacity_cell_wrap_4(clustersYs_data, clustersYs_size, i11);
 
   // 'ClusterPoints2D:17' for i = 1:SmartLoaderCompilationConstants.MaxNumClusters 
   // 'ClusterPoints2D:18' clustersYs{i} = zeros(0,0,'like', ptr);
@@ -905,528 +907,534 @@ static void ClusterPoints2D(PerceptionSmartLoaderStackData *SD, float ptr_data[]
   clustersYs_data[0].f1->data[0] = SD->u2.f11.ys_data[0];
 
   // 'ClusterPoints2D:34' cellArrayIndex = 1;
-  cellArrayIndex = 1.0;
+  cellArrayIndex = 0;
 
   // 'ClusterPoints2D:35' while ~isempty(ptr)
   emxInit_real32_T(&distanceMat, 2);
-  emxInitMatrix_cell_wrap_3(reshapes);
+  emxInitMatrix_cell_wrap_4(reshapes);
   emxInit_real32_T(&ex, 1);
   emxInit_int32_T(&idx, 1);
-  emxInitMatrix_cell_wrap_3(b_reshapes);
-  emxInitMatrix_cell_wrap_3(c_reshapes);
+  emxInitMatrix_cell_wrap_4(b_reshapes);
+  emxInitMatrix_cell_wrap_4(c_reshapes);
   emxInit_real32_T(&d_reshapes, 2);
-  while (ptr_size[0] != 0) {
-    //  Calculate the distance from the current cluster to all the other points - 
-    //  calcualte the distance from all the points in a cluster to all the other points 
-    // 'ClusterPoints2D:39' ptrTmp = [clustersXs{cellArrayIndex} clustersYs{cellArrayIndex}]; 
-    i11 = (int)cellArrayIndex - 1;
-    if ((clustersXs_data[i11].f1->size[0] != 0) && (clustersXs_data[(int)
-         cellArrayIndex - 1].f1->size[1] != 0)) {
-      m = clustersXs_data[(int)cellArrayIndex - 1].f1->size[0];
-    } else if ((clustersYs_data[i11].f1->size[0] != 0) && (clustersYs_data[(int)
-                cellArrayIndex - 1].f1->size[1] != 0)) {
-      m = clustersYs_data[(int)cellArrayIndex - 1].f1->size[0];
-    } else {
-      m = clustersXs_data[(int)cellArrayIndex - 1].f1->size[0];
-      if (m <= 0) {
-        m = 0;
-      }
-
-      if (clustersYs_data[(int)cellArrayIndex - 1].f1->size[0] > m) {
-        m = clustersYs_data[(int)cellArrayIndex - 1].f1->size[0];
-      }
-    }
-
-    empty_non_axis_sizes = (m == 0);
-    if (empty_non_axis_sizes || ((clustersXs_data[(int)cellArrayIndex - 1]
-          .f1->size[0] != 0) && (clustersXs_data[(int)cellArrayIndex - 1]
-          .f1->size[1] != 0))) {
-      input_sizes_idx_1 = (signed char)clustersXs_data[(int)cellArrayIndex - 1].
-        f1->size[1];
-    } else {
-      input_sizes_idx_1 = 0;
-    }
-
-    loop_ub = input_sizes_idx_1;
-    if ((input_sizes_idx_1 == clustersXs_data[(int)cellArrayIndex - 1].f1->size
-         [1]) && (m == clustersXs_data[(int)cellArrayIndex - 1].f1->size[0])) {
-      i12 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
-      reshapes[0].f1->size[1] = input_sizes_idx_1;
-      reshapes[0].f1->size[0] = m;
-      emxEnsureCapacity_real32_T(reshapes[0].f1, i12);
-      loop_ub = input_sizes_idx_1 * m;
-      for (i12 = 0; i12 < loop_ub; i12++) {
-        reshapes[0].f1->data[i12] = clustersXs_data[(int)cellArrayIndex - 1].
-          f1->data[i12];
-      }
-    } else {
-      i12 = 0;
-      i13 = 0;
-      n = 0;
-      i14 = 0;
-      i15 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
-      reshapes[0].f1->size[1] = input_sizes_idx_1;
-      reshapes[0].f1->size[0] = m;
-      emxEnsureCapacity_real32_T(reshapes[0].f1, i15);
-      for (i15 = 0; i15 < m * loop_ub; i15++) {
-        reshapes[0].f1->data[i13 + reshapes[0].f1->size[1] * i12] =
-          clustersXs_data[(int)cellArrayIndex - 1].f1->data[i14 +
-          clustersXs_data[(int)cellArrayIndex - 1].f1->size[1] * n];
-        i12++;
-        n++;
-        if (i12 > reshapes[0].f1->size[0] - 1) {
-          i12 = 0;
-          i13++;
+  do {
+    exitg1 = 0;
+    if (ptr_size[0] != 0) {
+      //  Calculate the distance from the current cluster to all the other points - 
+      //  calcualte the distance from all the points in a cluster to all the other points 
+      // 'ClusterPoints2D:39' ptrTmp = [clustersXs{cellArrayIndex} clustersYs{cellArrayIndex}]; 
+      if ((clustersXs_data[cellArrayIndex].f1->size[0] != 0) &&
+          (clustersXs_data[cellArrayIndex].f1->size[1] != 0)) {
+        m = clustersXs_data[cellArrayIndex].f1->size[0];
+      } else if ((clustersYs_data[cellArrayIndex].f1->size[0] != 0) &&
+                 (clustersYs_data[cellArrayIndex].f1->size[1] != 0)) {
+        m = clustersYs_data[cellArrayIndex].f1->size[0];
+      } else {
+        m = clustersXs_data[cellArrayIndex].f1->size[0];
+        if (m <= 0) {
+          m = 0;
         }
 
-        if (n > clustersXs_data[(int)cellArrayIndex - 1].f1->size[0] - 1) {
-          n = 0;
-          i14++;
-        }
-      }
-    }
-
-    if (empty_non_axis_sizes || ((clustersYs_data[(int)cellArrayIndex - 1]
-          .f1->size[0] != 0) && (clustersYs_data[(int)cellArrayIndex - 1]
-          .f1->size[1] != 0))) {
-      input_sizes_idx_1 = (signed char)clustersYs_data[(int)cellArrayIndex - 1].
-        f1->size[1];
-    } else {
-      input_sizes_idx_1 = 0;
-    }
-
-    loop_ub = input_sizes_idx_1;
-    if ((input_sizes_idx_1 == clustersYs_data[(int)cellArrayIndex - 1].f1->size
-         [1]) && (m == clustersYs_data[(int)cellArrayIndex - 1].f1->size[0])) {
-      i12 = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
-      reshapes[1].f1->size[1] = input_sizes_idx_1;
-      reshapes[1].f1->size[0] = m;
-      emxEnsureCapacity_real32_T(reshapes[1].f1, i12);
-      loop_ub = input_sizes_idx_1 * m;
-      for (i12 = 0; i12 < loop_ub; i12++) {
-        reshapes[1].f1->data[i12] = clustersYs_data[(int)cellArrayIndex - 1].
-          f1->data[i12];
-      }
-    } else {
-      i12 = 0;
-      i13 = 0;
-      n = 0;
-      i14 = 0;
-      i15 = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
-      reshapes[1].f1->size[1] = input_sizes_idx_1;
-      reshapes[1].f1->size[0] = m;
-      emxEnsureCapacity_real32_T(reshapes[1].f1, i15);
-      for (i15 = 0; i15 < m * loop_ub; i15++) {
-        reshapes[1].f1->data[i13 + reshapes[1].f1->size[1] * i12] =
-          clustersYs_data[(int)cellArrayIndex - 1].f1->data[i14 +
-          clustersYs_data[(int)cellArrayIndex - 1].f1->size[1] * n];
-        i12++;
-        n++;
-        if (i12 > reshapes[1].f1->size[0] - 1) {
-          i12 = 0;
-          i13++;
-        }
-
-        if (n > clustersYs_data[(int)cellArrayIndex - 1].f1->size[0] - 1) {
-          n = 0;
-          i14++;
-        }
-      }
-    }
-
-    // 'ClusterPoints2D:40' distanceMat = pdist2(ptrTmp, ptr);
-    i12 = d_reshapes->size[0] * d_reshapes->size[1];
-    d_reshapes->size[1] = reshapes[0].f1->size[1] + reshapes[1].f1->size[1];
-    d_reshapes->size[0] = reshapes[0].f1->size[0];
-    emxEnsureCapacity_real32_T(d_reshapes, i12);
-    loop_ub = reshapes[0].f1->size[0];
-    for (i12 = 0; i12 < loop_ub; i12++) {
-      input_sizes_idx_0 = reshapes[0].f1->size[1];
-      for (i13 = 0; i13 < input_sizes_idx_0; i13++) {
-        d_reshapes->data[i13 + d_reshapes->size[1] * i12] = reshapes[0].f1->
-          data[i13 + reshapes[0].f1->size[1] * i12];
-      }
-    }
-
-    loop_ub = reshapes[1].f1->size[0];
-    for (i12 = 0; i12 < loop_ub; i12++) {
-      input_sizes_idx_0 = reshapes[1].f1->size[1];
-      for (i13 = 0; i13 < input_sizes_idx_0; i13++) {
-        d_reshapes->data[(i13 + reshapes[0].f1->size[1]) + d_reshapes->size[1] *
-          i12] = reshapes[1].f1->data[i13 + reshapes[1].f1->size[1] * i12];
-      }
-    }
-
-    pdist2(SD, d_reshapes, ptr_data, ptr_size, distanceMat);
-
-    // 'ClusterPoints2D:41' if size(distanceMat,1) == 1
-    if (distanceMat->size[0] == 1) {
-      // 'ClusterPoints2D:42' [minVal, minInd] = min(distanceMat,[],2);
-      n = distanceMat->size[1];
-      i12 = ex->size[0];
-      ex->size[0] = 1;
-      emxEnsureCapacity_real32_T(ex, i12);
-      i12 = idx->size[0];
-      idx->size[0] = 1;
-      emxEnsureCapacity_int32_T(idx, i12);
-      idx->data[0] = 1;
-      ex->data[0] = distanceMat->data[0];
-      for (loop_ub = 2; loop_ub <= n; loop_ub++) {
-        if (ex->data[0] > distanceMat->data[loop_ub - 1]) {
-          ex->data[0] = distanceMat->data[loop_ub - 1];
-          idx->data[0] = loop_ub;
+        if (clustersYs_data[cellArrayIndex].f1->size[0] > m) {
+          m = clustersYs_data[cellArrayIndex].f1->size[0];
         }
       }
 
-      loop_ub = ex->size[0];
-      for (i12 = 0; i12 < loop_ub; i12++) {
-        minVal_data[i12] = ex->data[i12];
+      empty_non_axis_sizes = (m == 0);
+      if (empty_non_axis_sizes || ((clustersXs_data[cellArrayIndex].f1->size[0]
+            != 0) && (clustersXs_data[cellArrayIndex].f1->size[1] != 0))) {
+        input_sizes_idx_1 = (signed char)clustersXs_data[cellArrayIndex]
+          .f1->size[1];
+      } else {
+        input_sizes_idx_1 = 0;
       }
 
-      loop_ub = idx->size[0];
-      for (i12 = 0; i12 < loop_ub; i12++) {
-        minInd_data[i12] = idx->data[i12];
-      }
-    } else {
-      // 'ClusterPoints2D:43' else
-      // 'ClusterPoints2D:44' [minValTmp, minIndTmp] = min(distanceMat,[],2);
-      m = distanceMat->size[0];
-      n = distanceMat->size[1];
-      distanceMat_idx_0 = (unsigned int)distanceMat->size[0];
-      i12 = ex->size[0];
-      ex->size[0] = (int)distanceMat_idx_0;
-      emxEnsureCapacity_real32_T(ex, i12);
-      i12 = idx->size[0];
-      idx->size[0] = distanceMat->size[0];
-      emxEnsureCapacity_int32_T(idx, i12);
-      loop_ub = distanceMat->size[0];
-      for (i12 = 0; i12 < loop_ub; i12++) {
-        idx->data[i12] = 1;
+      loop_ub = input_sizes_idx_1;
+      if ((input_sizes_idx_1 == clustersXs_data[cellArrayIndex].f1->size[1]) &&
+          (m == clustersXs_data[cellArrayIndex].f1->size[0])) {
+        i11 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
+        reshapes[0].f1->size[1] = input_sizes_idx_1;
+        reshapes[0].f1->size[0] = m;
+        emxEnsureCapacity_real32_T(reshapes[0].f1, i11);
+        loop_ub = input_sizes_idx_1 * m;
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          reshapes[0].f1->data[i11] = clustersXs_data[cellArrayIndex].f1->
+            data[i11];
+        }
+      } else {
+        i11 = 0;
+        i12 = 0;
+        n = 0;
+        i13 = 0;
+        i14 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
+        reshapes[0].f1->size[1] = input_sizes_idx_1;
+        reshapes[0].f1->size[0] = m;
+        emxEnsureCapacity_real32_T(reshapes[0].f1, i14);
+        for (i14 = 0; i14 < m * loop_ub; i14++) {
+          reshapes[0].f1->data[i12 + reshapes[0].f1->size[1] * i11] =
+            clustersXs_data[cellArrayIndex].f1->data[i13 +
+            clustersXs_data[cellArrayIndex].f1->size[1] * n];
+          i11++;
+          n++;
+          if (i11 > reshapes[0].f1->size[0] - 1) {
+            i11 = 0;
+            i12++;
+          }
+
+          if (n > clustersXs_data[cellArrayIndex].f1->size[0] - 1) {
+            n = 0;
+            i13++;
+          }
+        }
       }
 
-      if (distanceMat->size[0] >= 1) {
-        for (input_sizes_idx_0 = 0; input_sizes_idx_0 < m; input_sizes_idx_0++)
-        {
-          ex->data[input_sizes_idx_0] = distanceMat->data[distanceMat->size[1] *
-            input_sizes_idx_0];
-          for (loop_ub = 2; loop_ub <= n; loop_ub++) {
-            if (ex->data[input_sizes_idx_0] > distanceMat->data[(loop_ub +
-                 distanceMat->size[1] * input_sizes_idx_0) - 1]) {
-              ex->data[input_sizes_idx_0] = distanceMat->data[(loop_ub +
-                distanceMat->size[1] * input_sizes_idx_0) - 1];
-              idx->data[input_sizes_idx_0] = loop_ub;
+      if (empty_non_axis_sizes || ((clustersYs_data[cellArrayIndex].f1->size[0]
+            != 0) && (clustersYs_data[cellArrayIndex].f1->size[1] != 0))) {
+        input_sizes_idx_1 = (signed char)clustersYs_data[cellArrayIndex]
+          .f1->size[1];
+      } else {
+        input_sizes_idx_1 = 0;
+      }
+
+      loop_ub = input_sizes_idx_1;
+      if ((input_sizes_idx_1 == clustersYs_data[cellArrayIndex].f1->size[1]) &&
+          (m == clustersYs_data[cellArrayIndex].f1->size[0])) {
+        i11 = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
+        reshapes[1].f1->size[1] = input_sizes_idx_1;
+        reshapes[1].f1->size[0] = m;
+        emxEnsureCapacity_real32_T(reshapes[1].f1, i11);
+        loop_ub = input_sizes_idx_1 * m;
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          reshapes[1].f1->data[i11] = clustersYs_data[cellArrayIndex].f1->
+            data[i11];
+        }
+      } else {
+        i11 = 0;
+        i12 = 0;
+        n = 0;
+        i13 = 0;
+        i14 = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
+        reshapes[1].f1->size[1] = input_sizes_idx_1;
+        reshapes[1].f1->size[0] = m;
+        emxEnsureCapacity_real32_T(reshapes[1].f1, i14);
+        for (i14 = 0; i14 < m * loop_ub; i14++) {
+          reshapes[1].f1->data[i12 + reshapes[1].f1->size[1] * i11] =
+            clustersYs_data[cellArrayIndex].f1->data[i13 +
+            clustersYs_data[cellArrayIndex].f1->size[1] * n];
+          i11++;
+          n++;
+          if (i11 > reshapes[1].f1->size[0] - 1) {
+            i11 = 0;
+            i12++;
+          }
+
+          if (n > clustersYs_data[cellArrayIndex].f1->size[0] - 1) {
+            n = 0;
+            i13++;
+          }
+        }
+      }
+
+      // 'ClusterPoints2D:40' distanceMat = pdist2(ptrTmp, ptr);
+      i11 = d_reshapes->size[0] * d_reshapes->size[1];
+      d_reshapes->size[1] = reshapes[0].f1->size[1] + reshapes[1].f1->size[1];
+      d_reshapes->size[0] = reshapes[0].f1->size[0];
+      emxEnsureCapacity_real32_T(d_reshapes, i11);
+      loop_ub = reshapes[0].f1->size[0];
+      for (i11 = 0; i11 < loop_ub; i11++) {
+        input_sizes_idx_0 = reshapes[0].f1->size[1];
+        for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
+          d_reshapes->data[i12 + d_reshapes->size[1] * i11] = reshapes[0]
+            .f1->data[i12 + reshapes[0].f1->size[1] * i11];
+        }
+      }
+
+      loop_ub = reshapes[1].f1->size[0];
+      for (i11 = 0; i11 < loop_ub; i11++) {
+        input_sizes_idx_0 = reshapes[1].f1->size[1];
+        for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
+          d_reshapes->data[(i12 + reshapes[0].f1->size[1]) + d_reshapes->size[1]
+            * i11] = reshapes[1].f1->data[i12 + reshapes[1].f1->size[1] * i11];
+        }
+      }
+
+      pdist2(SD, d_reshapes, ptr_data, ptr_size, distanceMat);
+
+      // 'ClusterPoints2D:41' if size(distanceMat,1) == 1
+      if (distanceMat->size[0] == 1) {
+        // 'ClusterPoints2D:42' [minVal, minInd] = min(distanceMat,[],2);
+        n = distanceMat->size[1];
+        i11 = ex->size[0];
+        ex->size[0] = 1;
+        emxEnsureCapacity_real32_T(ex, i11);
+        i11 = idx->size[0];
+        idx->size[0] = 1;
+        emxEnsureCapacity_int32_T(idx, i11);
+        idx->data[0] = 1;
+        ex->data[0] = distanceMat->data[0];
+        for (loop_ub = 2; loop_ub <= n; loop_ub++) {
+          if (ex->data[0] > distanceMat->data[loop_ub - 1]) {
+            ex->data[0] = distanceMat->data[loop_ub - 1];
+            idx->data[0] = loop_ub;
+          }
+        }
+
+        loop_ub = ex->size[0];
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          minVal_data[i11] = ex->data[i11];
+        }
+
+        loop_ub = idx->size[0];
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          minInd_data[i11] = idx->data[i11];
+        }
+      } else {
+        // 'ClusterPoints2D:43' else
+        // 'ClusterPoints2D:44' [minValTmp, minIndTmp] = min(distanceMat,[],2);
+        m = distanceMat->size[0];
+        n = distanceMat->size[1];
+        distanceMat_idx_0 = (unsigned int)distanceMat->size[0];
+        i11 = ex->size[0];
+        ex->size[0] = (int)distanceMat_idx_0;
+        emxEnsureCapacity_real32_T(ex, i11);
+        i11 = idx->size[0];
+        idx->size[0] = distanceMat->size[0];
+        emxEnsureCapacity_int32_T(idx, i11);
+        loop_ub = distanceMat->size[0];
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          idx->data[i11] = 1;
+        }
+
+        if (distanceMat->size[0] >= 1) {
+          for (input_sizes_idx_0 = 0; input_sizes_idx_0 < m; input_sizes_idx_0++)
+          {
+            ex->data[input_sizes_idx_0] = distanceMat->data[distanceMat->size[1]
+              * input_sizes_idx_0];
+            for (loop_ub = 2; loop_ub <= n; loop_ub++) {
+              if (ex->data[input_sizes_idx_0] > distanceMat->data[(loop_ub +
+                   distanceMat->size[1] * input_sizes_idx_0) - 1]) {
+                ex->data[input_sizes_idx_0] = distanceMat->data[(loop_ub +
+                  distanceMat->size[1] * input_sizes_idx_0) - 1];
+                idx->data[input_sizes_idx_0] = loop_ub;
+              }
             }
           }
         }
-      }
 
-      // 'ClusterPoints2D:45' [~, minMinInd] = min(minValTmp);
-      n = ex->size[0];
-      if (ex->size[0] <= 2) {
-        if (ex->size[0] == 1) {
-          input_sizes_idx_0 = 0;
+        // 'ClusterPoints2D:45' [~, minMinInd] = min(minValTmp);
+        n = ex->size[0];
+        if (ex->size[0] <= 2) {
+          if (ex->size[0] == 1) {
+            input_sizes_idx_0 = 0;
+          } else {
+            input_sizes_idx_0 = (ex->data[0] > ex->data[1]);
+          }
         } else {
-          input_sizes_idx_0 = (ex->data[0] > ex->data[1]);
-        }
-      } else {
-        b_ex = ex->data[0];
-        input_sizes_idx_0 = 0;
-        for (loop_ub = 2; loop_ub <= n; loop_ub++) {
-          if (b_ex > ex->data[loop_ub - 1]) {
-            b_ex = ex->data[loop_ub - 1];
-            input_sizes_idx_0 = loop_ub - 1;
+          b_ex = ex->data[0];
+          input_sizes_idx_0 = 0;
+          for (loop_ub = 2; loop_ub <= n; loop_ub++) {
+            if (b_ex > ex->data[loop_ub - 1]) {
+              b_ex = ex->data[loop_ub - 1];
+              input_sizes_idx_0 = loop_ub - 1;
+            }
           }
         }
+
+        // 'ClusterPoints2D:45' ~
+        // 'ClusterPoints2D:47' minVal = minValTmp(minMinInd);
+        minVal_data[0] = ex->data[input_sizes_idx_0];
+
+        // 'ClusterPoints2D:48' minInd = minIndTmp(minMinInd);
+        minInd_data[0] = idx->data[input_sizes_idx_0];
       }
 
-      // 'ClusterPoints2D:45' ~
-      // 'ClusterPoints2D:47' minVal = minValTmp(minMinInd);
-      minVal_data[0] = ex->data[input_sizes_idx_0];
-
-      // 'ClusterPoints2D:48' minInd = minIndTmp(minMinInd);
-      minInd_data[0] = idx->data[input_sizes_idx_0];
-    }
-
-    // 'ClusterPoints2D:52' if minVal <= maxDistance
-    b_minVal_data[0] = (minVal_data[0] <= maxDistance);
-    if (ifWhileCond(b_minVal_data)) {
-      //  Same cluster
-      // 'ClusterPoints2D:54' clustersXs{cellArrayIndex} = [clustersXs{cellArrayIndex}; ptr(minInd,1)]; 
-      if ((clustersXs_data[(int)cellArrayIndex - 1].f1->size[0] != 0) &&
-          (clustersXs_data[(int)cellArrayIndex - 1].f1->size[1] != 0)) {
-        input_sizes_idx_1 = (signed char)clustersXs_data[(int)cellArrayIndex - 1]
-          .f1->size[1];
-      } else {
-        input_sizes_idx_1 = 1;
-      }
-
-      if ((input_sizes_idx_1 == 0) || ((clustersXs_data[(int)cellArrayIndex - 1]
-            .f1->size[0] != 0) && (clustersXs_data[(int)cellArrayIndex - 1]
-            .f1->size[1] != 0))) {
-        input_sizes_idx_0 = clustersXs_data[(int)cellArrayIndex - 1].f1->size[0];
-      } else {
-        input_sizes_idx_0 = 0;
-      }
-
-      loop_ub = input_sizes_idx_1;
-      if ((input_sizes_idx_1 == clustersXs_data[(int)cellArrayIndex - 1]
-           .f1->size[1]) && (input_sizes_idx_0 == clustersXs_data[(int)
-                             cellArrayIndex - 1].f1->size[0])) {
-        i12 = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
-        b_reshapes[0].f1->size[1] = input_sizes_idx_1;
-        b_reshapes[0].f1->size[0] = input_sizes_idx_0;
-        emxEnsureCapacity_real32_T(b_reshapes[0].f1, i12);
-        loop_ub = input_sizes_idx_1 * input_sizes_idx_0;
-        for (i12 = 0; i12 < loop_ub; i12++) {
-          b_reshapes[0].f1->data[i12] = clustersXs_data[(int)cellArrayIndex - 1]
-            .f1->data[i12];
+      // 'ClusterPoints2D:52' if minVal <= maxDistance
+      b_minVal_data[0] = (minVal_data[0] <= maxDistance);
+      if (ifWhileCond(b_minVal_data)) {
+        //  Same cluster
+        // 'ClusterPoints2D:54' clustersXs{cellArrayIndex} = [clustersXs{cellArrayIndex}; ptr(minInd,1)]; 
+        if ((clustersXs_data[cellArrayIndex].f1->size[0] != 0) &&
+            (clustersXs_data[cellArrayIndex].f1->size[1] != 0)) {
+          input_sizes_idx_1 = (signed char)clustersXs_data[cellArrayIndex]
+            .f1->size[1];
+        } else {
+          input_sizes_idx_1 = 1;
         }
-      } else {
+
+        if ((input_sizes_idx_1 == 0) || ((clustersXs_data[cellArrayIndex]
+              .f1->size[0] != 0) && (clustersXs_data[cellArrayIndex].f1->size[1]
+              != 0))) {
+          input_sizes_idx_0 = clustersXs_data[cellArrayIndex].f1->size[0];
+        } else {
+          input_sizes_idx_0 = 0;
+        }
+
+        loop_ub = input_sizes_idx_1;
+        if ((input_sizes_idx_1 == clustersXs_data[cellArrayIndex].f1->size[1]) &&
+            (input_sizes_idx_0 == clustersXs_data[cellArrayIndex].f1->size[0]))
+        {
+          i11 = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
+          b_reshapes[0].f1->size[1] = input_sizes_idx_1;
+          b_reshapes[0].f1->size[0] = input_sizes_idx_0;
+          emxEnsureCapacity_real32_T(b_reshapes[0].f1, i11);
+          loop_ub = input_sizes_idx_1 * input_sizes_idx_0;
+          for (i11 = 0; i11 < loop_ub; i11++) {
+            b_reshapes[0].f1->data[i11] = clustersXs_data[cellArrayIndex]
+              .f1->data[i11];
+          }
+        } else {
+          i11 = 0;
+          i12 = 0;
+          n = 0;
+          i13 = 0;
+          i14 = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
+          b_reshapes[0].f1->size[1] = input_sizes_idx_1;
+          b_reshapes[0].f1->size[0] = input_sizes_idx_0;
+          emxEnsureCapacity_real32_T(b_reshapes[0].f1, i14);
+          for (i14 = 0; i14 < input_sizes_idx_0 * loop_ub; i14++) {
+            b_reshapes[0].f1->data[i12 + b_reshapes[0].f1->size[1] * i11] =
+              clustersXs_data[cellArrayIndex].f1->data[i13 +
+              clustersXs_data[cellArrayIndex].f1->size[1] * n];
+            i11++;
+            n++;
+            if (i11 > b_reshapes[0].f1->size[0] - 1) {
+              i11 = 0;
+              i12++;
+            }
+
+            if (n > clustersXs_data[cellArrayIndex].f1->size[0] - 1) {
+              n = 0;
+              i13++;
+            }
+          }
+        }
+
+        loop_ub = input_sizes_idx_1;
+        i11 = 0;
         i12 = 0;
-        i13 = 0;
-        n = 0;
-        i14 = 0;
-        i15 = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
-        b_reshapes[0].f1->size[1] = input_sizes_idx_1;
-        b_reshapes[0].f1->size[0] = input_sizes_idx_0;
-        emxEnsureCapacity_real32_T(b_reshapes[0].f1, i15);
-        for (i15 = 0; i15 < input_sizes_idx_0 * loop_ub; i15++) {
-          b_reshapes[0].f1->data[i13 + b_reshapes[0].f1->size[1] * i12] =
-            clustersXs_data[(int)cellArrayIndex - 1].f1->data[i14 +
-            clustersXs_data[(int)cellArrayIndex - 1].f1->size[1] * n];
+        n = b_reshapes[1].f1->size[0] * b_reshapes[1].f1->size[1];
+        b_reshapes[1].f1->size[1] = input_sizes_idx_1;
+        b_reshapes[1].f1->size[0] = 1;
+        emxEnsureCapacity_real32_T(b_reshapes[1].f1, n);
+        for (n = 0; n < loop_ub; n++) {
+          b_reshapes[1].f1->data[i11] = ptr_data[(minInd_data[i12] - 1) << 1];
           i12++;
-          n++;
-          if (i12 > b_reshapes[0].f1->size[0] - 1) {
-            i12 = 0;
-            i13++;
+          i11++;
+        }
+
+        i11 = clustersXs_data[cellArrayIndex].f1->size[0] *
+          clustersXs_data[cellArrayIndex].f1->size[1];
+        clustersXs_data[cellArrayIndex].f1->size[1] = b_reshapes[0].f1->size[1];
+        clustersXs_data[cellArrayIndex].f1->size[0] = b_reshapes[0].f1->size[0]
+          + b_reshapes[1].f1->size[0];
+        emxEnsureCapacity_real32_T(clustersXs_data[cellArrayIndex].f1, i11);
+        loop_ub = b_reshapes[0].f1->size[0];
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          input_sizes_idx_0 = b_reshapes[0].f1->size[1];
+          for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
+            clustersXs_data[cellArrayIndex].f1->data[i12 +
+              clustersXs_data[cellArrayIndex].f1->size[1] * i11] = b_reshapes[0]
+              .f1->data[i12 + b_reshapes[0].f1->size[1] * i11];
           }
+        }
 
-          if (n > clustersXs_data[(int)cellArrayIndex - 1].f1->size[0] - 1) {
-            n = 0;
-            i14++;
+        loop_ub = b_reshapes[1].f1->size[0];
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          input_sizes_idx_0 = b_reshapes[1].f1->size[1];
+          for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
+            clustersXs_data[cellArrayIndex].f1->data[i12 +
+              clustersXs_data[cellArrayIndex].f1->size[1] * (i11 + b_reshapes[0]
+              .f1->size[0])] = b_reshapes[1].f1->data[i12 + b_reshapes[1]
+              .f1->size[1] * i11];
           }
         }
-      }
 
-      loop_ub = input_sizes_idx_1;
-      i12 = 0;
-      i13 = 0;
-      n = b_reshapes[1].f1->size[0] * b_reshapes[1].f1->size[1];
-      b_reshapes[1].f1->size[1] = input_sizes_idx_1;
-      b_reshapes[1].f1->size[0] = 1;
-      emxEnsureCapacity_real32_T(b_reshapes[1].f1, n);
-      for (n = 0; n < loop_ub; n++) {
-        b_reshapes[1].f1->data[i12] = ptr_data[(minInd_data[i13] - 1) << 1];
-        i13++;
-        i12++;
-      }
-
-      i12 = clustersXs_data[i11].f1->size[0] * clustersXs_data[(int)
-        cellArrayIndex - 1].f1->size[1];
-      clustersXs_data[(int)cellArrayIndex - 1].f1->size[1] = b_reshapes[0]
-        .f1->size[1];
-      clustersXs_data[(int)cellArrayIndex - 1].f1->size[0] = b_reshapes[0]
-        .f1->size[0] + b_reshapes[1].f1->size[0];
-      emxEnsureCapacity_real32_T(clustersXs_data[(int)cellArrayIndex - 1].f1,
-        i12);
-      loop_ub = b_reshapes[0].f1->size[0];
-      for (i12 = 0; i12 < loop_ub; i12++) {
-        input_sizes_idx_0 = b_reshapes[0].f1->size[1];
-        for (i13 = 0; i13 < input_sizes_idx_0; i13++) {
-          clustersXs_data[(int)cellArrayIndex - 1].f1->data[i13 +
-            clustersXs_data[(int)cellArrayIndex - 1].f1->size[1] * i12] =
-            b_reshapes[0].f1->data[i13 + b_reshapes[0].f1->size[1] * i12];
+        // 'ClusterPoints2D:55' clustersYs{cellArrayIndex} = [clustersYs{cellArrayIndex}; ptr(minInd,2)]; 
+        if ((clustersYs_data[cellArrayIndex].f1->size[0] != 0) &&
+            (clustersYs_data[cellArrayIndex].f1->size[1] != 0)) {
+          input_sizes_idx_1 = (signed char)clustersYs_data[cellArrayIndex]
+            .f1->size[1];
+        } else {
+          input_sizes_idx_1 = 1;
         }
-      }
 
-      loop_ub = b_reshapes[1].f1->size[0];
-      for (i12 = 0; i12 < loop_ub; i12++) {
-        input_sizes_idx_0 = b_reshapes[1].f1->size[1];
-        for (i13 = 0; i13 < input_sizes_idx_0; i13++) {
-          clustersXs_data[(int)cellArrayIndex - 1].f1->data[i13 +
-            clustersXs_data[(int)cellArrayIndex - 1].f1->size[1] * (i12 +
-            b_reshapes[0].f1->size[0])] = b_reshapes[1].f1->data[i13 +
-            b_reshapes[1].f1->size[1] * i12];
+        if ((input_sizes_idx_1 == 0) || ((clustersYs_data[cellArrayIndex]
+              .f1->size[0] != 0) && (clustersYs_data[cellArrayIndex].f1->size[1]
+              != 0))) {
+          input_sizes_idx_0 = clustersYs_data[cellArrayIndex].f1->size[0];
+        } else {
+          input_sizes_idx_0 = 0;
         }
-      }
 
-      // 'ClusterPoints2D:55' clustersYs{cellArrayIndex} = [clustersYs{cellArrayIndex}; ptr(minInd,2)]; 
-      if ((clustersYs_data[(int)cellArrayIndex - 1].f1->size[0] != 0) &&
-          (clustersYs_data[(int)cellArrayIndex - 1].f1->size[1] != 0)) {
-        input_sizes_idx_1 = (signed char)clustersYs_data[(int)cellArrayIndex - 1]
-          .f1->size[1];
-      } else {
-        input_sizes_idx_1 = 1;
-      }
+        loop_ub = input_sizes_idx_1;
+        if ((input_sizes_idx_1 == clustersYs_data[cellArrayIndex].f1->size[1]) &&
+            (input_sizes_idx_0 == clustersYs_data[cellArrayIndex].f1->size[0]))
+        {
+          i11 = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
+          c_reshapes[0].f1->size[1] = input_sizes_idx_1;
+          c_reshapes[0].f1->size[0] = input_sizes_idx_0;
+          emxEnsureCapacity_real32_T(c_reshapes[0].f1, i11);
+          loop_ub = input_sizes_idx_1 * input_sizes_idx_0;
+          for (i11 = 0; i11 < loop_ub; i11++) {
+            c_reshapes[0].f1->data[i11] = clustersYs_data[cellArrayIndex]
+              .f1->data[i11];
+          }
+        } else {
+          i11 = 0;
+          i12 = 0;
+          n = 0;
+          i13 = 0;
+          i14 = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
+          c_reshapes[0].f1->size[1] = input_sizes_idx_1;
+          c_reshapes[0].f1->size[0] = input_sizes_idx_0;
+          emxEnsureCapacity_real32_T(c_reshapes[0].f1, i14);
+          for (i14 = 0; i14 < input_sizes_idx_0 * loop_ub; i14++) {
+            c_reshapes[0].f1->data[i12 + c_reshapes[0].f1->size[1] * i11] =
+              clustersYs_data[cellArrayIndex].f1->data[i13 +
+              clustersYs_data[cellArrayIndex].f1->size[1] * n];
+            i11++;
+            n++;
+            if (i11 > c_reshapes[0].f1->size[0] - 1) {
+              i11 = 0;
+              i12++;
+            }
 
-      if ((input_sizes_idx_1 == 0) || ((clustersYs_data[(int)cellArrayIndex - 1]
-            .f1->size[0] != 0) && (clustersYs_data[(int)cellArrayIndex - 1]
-            .f1->size[1] != 0))) {
-        input_sizes_idx_0 = clustersYs_data[(int)cellArrayIndex - 1].f1->size[0];
-      } else {
-        input_sizes_idx_0 = 0;
-      }
-
-      loop_ub = input_sizes_idx_1;
-      if ((input_sizes_idx_1 == clustersYs_data[(int)cellArrayIndex - 1]
-           .f1->size[1]) && (input_sizes_idx_0 == clustersYs_data[(int)
-                             cellArrayIndex - 1].f1->size[0])) {
-        i12 = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
-        c_reshapes[0].f1->size[1] = input_sizes_idx_1;
-        c_reshapes[0].f1->size[0] = input_sizes_idx_0;
-        emxEnsureCapacity_real32_T(c_reshapes[0].f1, i12);
-        loop_ub = input_sizes_idx_1 * input_sizes_idx_0;
-        for (i12 = 0; i12 < loop_ub; i12++) {
-          c_reshapes[0].f1->data[i12] = clustersYs_data[(int)cellArrayIndex - 1]
-            .f1->data[i12];
+            if (n > clustersYs_data[cellArrayIndex].f1->size[0] - 1) {
+              n = 0;
+              i13++;
+            }
+          }
         }
-      } else {
+
+        loop_ub = input_sizes_idx_1;
+        i11 = 0;
         i12 = 0;
-        i13 = 0;
-        n = 0;
-        i14 = 0;
-        i15 = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
-        c_reshapes[0].f1->size[1] = input_sizes_idx_1;
-        c_reshapes[0].f1->size[0] = input_sizes_idx_0;
-        emxEnsureCapacity_real32_T(c_reshapes[0].f1, i15);
-        for (i15 = 0; i15 < input_sizes_idx_0 * loop_ub; i15++) {
-          c_reshapes[0].f1->data[i13 + c_reshapes[0].f1->size[1] * i12] =
-            clustersYs_data[(int)cellArrayIndex - 1].f1->data[i14 +
-            clustersYs_data[(int)cellArrayIndex - 1].f1->size[1] * n];
+        n = c_reshapes[1].f1->size[0] * c_reshapes[1].f1->size[1];
+        c_reshapes[1].f1->size[1] = input_sizes_idx_1;
+        c_reshapes[1].f1->size[0] = 1;
+        emxEnsureCapacity_real32_T(c_reshapes[1].f1, n);
+        for (n = 0; n < loop_ub; n++) {
+          c_reshapes[1].f1->data[i11] = ptr_data[1 + ((minInd_data[i12] - 1) <<
+            1)];
           i12++;
-          n++;
-          if (i12 > c_reshapes[0].f1->size[0] - 1) {
-            i12 = 0;
-            i13++;
+          i11++;
+        }
+
+        i11 = clustersYs_data[cellArrayIndex].f1->size[0] *
+          clustersYs_data[cellArrayIndex].f1->size[1];
+        clustersYs_data[cellArrayIndex].f1->size[1] = c_reshapes[0].f1->size[1];
+        clustersYs_data[cellArrayIndex].f1->size[0] = c_reshapes[0].f1->size[0]
+          + c_reshapes[1].f1->size[0];
+        emxEnsureCapacity_real32_T(clustersYs_data[cellArrayIndex].f1, i11);
+        loop_ub = c_reshapes[0].f1->size[0];
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          input_sizes_idx_0 = c_reshapes[0].f1->size[1];
+          for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
+            clustersYs_data[cellArrayIndex].f1->data[i12 +
+              clustersYs_data[cellArrayIndex].f1->size[1] * i11] = c_reshapes[0]
+              .f1->data[i12 + c_reshapes[0].f1->size[1] * i11];
+          }
+        }
+
+        loop_ub = c_reshapes[1].f1->size[0];
+        for (i11 = 0; i11 < loop_ub; i11++) {
+          input_sizes_idx_0 = c_reshapes[1].f1->size[1];
+          for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
+            clustersYs_data[cellArrayIndex].f1->data[i12 +
+              clustersYs_data[cellArrayIndex].f1->size[1] * (i11 + c_reshapes[0]
+              .f1->size[0])] = c_reshapes[1].f1->data[i12 + c_reshapes[1]
+              .f1->size[1] * i11];
+          }
+        }
+
+        // 'ClusterPoints2D:57' ptr(minInd,:) = [];
+        tmp_size[1] = 2;
+        tmp_size[0] = ptr_size[0];
+        loop_ub = 2 * ptr_size[0];
+        if (0 <= loop_ub - 1) {
+          memcpy(&SD->u2.f11.tmp_data[0], &ptr_data[0], (unsigned int)(loop_ub *
+                  (int)sizeof(float)));
+        }
+
+        b_minInd_data[0] = minInd_data[0];
+        c_nullAssignment(SD, SD->u2.f11.tmp_data, tmp_size, b_minInd_data);
+        ptr_size[1] = 2;
+        ptr_size[0] = tmp_size[0];
+        loop_ub = tmp_size[1] * tmp_size[0];
+        if (0 <= loop_ub - 1) {
+          memcpy(&ptr_data[0], &SD->u2.f11.tmp_data[0], (unsigned int)(loop_ub *
+                  (int)sizeof(float)));
+        }
+      } else {
+        // 'ClusterPoints2D:58' else
+        //  new cluster
+        // 'ClusterPoints2D:60' xs2 = ptr(minInd,1);
+        input_sizes_idx_0 = (minInd_data[0] - 1) << 1;
+
+        // 'ClusterPoints2D:61' cellArrayIndex = cellArrayIndex + 1;
+        cellArrayIndex++;
+
+        // 'ClusterPoints2D:63' if cellArrayIndex > SmartLoaderCompilationConstants.MaxNumClusters 
+        if (cellArrayIndex + 1 > 64) {
+          //  Run time check for the maximum cell size, use this to avoid run time exception  
+          // 'ClusterPoints2D:65' status = false;
+          *status = false;
+          exitg1 = 1;
+        } else {
+          // 'ClusterPoints2D:69' clustersXs{cellArrayIndex} = xs2;
+          i11 = clustersXs_data[cellArrayIndex].f1->size[0] *
+            clustersXs_data[cellArrayIndex].f1->size[1];
+          clustersXs_data[cellArrayIndex].f1->size[1] = 1;
+          clustersXs_data[cellArrayIndex].f1->size[0] = 1;
+          emxEnsureCapacity_real32_T(clustersXs_data[cellArrayIndex].f1, i11);
+          clustersXs_data[cellArrayIndex].f1->data[0] =
+            ptr_data[input_sizes_idx_0];
+
+          // 'ClusterPoints2D:71' ys2 = ptr(minInd,2);
+          minVal_data[0] = ptr_data[1 + input_sizes_idx_0];
+
+          // 'ClusterPoints2D:72' clustersYs{cellArrayIndex} = ys2;
+          i11 = clustersYs_data[cellArrayIndex].f1->size[0] *
+            clustersYs_data[cellArrayIndex].f1->size[1];
+          clustersYs_data[cellArrayIndex].f1->size[1] = 1;
+          clustersYs_data[cellArrayIndex].f1->size[0] = 1;
+          emxEnsureCapacity_real32_T(clustersYs_data[cellArrayIndex].f1, i11);
+          clustersYs_data[cellArrayIndex].f1->data[0] = ptr_data[1 +
+            input_sizes_idx_0];
+
+          // 'ClusterPoints2D:74' ptr(minInd,:) = [];
+          tmp_size[1] = 2;
+          tmp_size[0] = ptr_size[0];
+          loop_ub = 2 * ptr_size[0];
+          if (0 <= loop_ub - 1) {
+            memcpy(&SD->u2.f11.tmp_data[0], &ptr_data[0], (unsigned int)(loop_ub
+                    * (int)sizeof(float)));
           }
 
-          if (n > clustersYs_data[(int)cellArrayIndex - 1].f1->size[0] - 1) {
-            n = 0;
-            i14++;
+          b_minInd_data[0] = minInd_data[0];
+          c_nullAssignment(SD, SD->u2.f11.tmp_data, tmp_size, b_minInd_data);
+          ptr_size[1] = 2;
+          ptr_size[0] = tmp_size[0];
+          loop_ub = tmp_size[1] * tmp_size[0];
+          if (0 <= loop_ub - 1) {
+            memcpy(&ptr_data[0], &SD->u2.f11.tmp_data[0], (unsigned int)(loop_ub
+                    * (int)sizeof(float)));
           }
         }
-      }
-
-      loop_ub = input_sizes_idx_1;
-      i12 = 0;
-      i13 = 0;
-      n = c_reshapes[1].f1->size[0] * c_reshapes[1].f1->size[1];
-      c_reshapes[1].f1->size[1] = input_sizes_idx_1;
-      c_reshapes[1].f1->size[0] = 1;
-      emxEnsureCapacity_real32_T(c_reshapes[1].f1, n);
-      for (n = 0; n < loop_ub; n++) {
-        c_reshapes[1].f1->data[i12] = ptr_data[1 + ((minInd_data[i13] - 1) << 1)];
-        i13++;
-        i12++;
-      }
-
-      i11 = clustersYs_data[i11].f1->size[0] * clustersYs_data[(int)
-        cellArrayIndex - 1].f1->size[1];
-      clustersYs_data[(int)cellArrayIndex - 1].f1->size[1] = c_reshapes[0]
-        .f1->size[1];
-      clustersYs_data[(int)cellArrayIndex - 1].f1->size[0] = c_reshapes[0]
-        .f1->size[0] + c_reshapes[1].f1->size[0];
-      emxEnsureCapacity_real32_T(clustersYs_data[(int)cellArrayIndex - 1].f1,
-        i11);
-      loop_ub = c_reshapes[0].f1->size[0];
-      for (i11 = 0; i11 < loop_ub; i11++) {
-        input_sizes_idx_0 = c_reshapes[0].f1->size[1];
-        for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
-          clustersYs_data[(int)cellArrayIndex - 1].f1->data[i12 +
-            clustersYs_data[(int)cellArrayIndex - 1].f1->size[1] * i11] =
-            c_reshapes[0].f1->data[i12 + c_reshapes[0].f1->size[1] * i11];
-        }
-      }
-
-      loop_ub = c_reshapes[1].f1->size[0];
-      for (i11 = 0; i11 < loop_ub; i11++) {
-        input_sizes_idx_0 = c_reshapes[1].f1->size[1];
-        for (i12 = 0; i12 < input_sizes_idx_0; i12++) {
-          clustersYs_data[(int)cellArrayIndex - 1].f1->data[i12 +
-            clustersYs_data[(int)cellArrayIndex - 1].f1->size[1] * (i11 +
-            c_reshapes[0].f1->size[0])] = c_reshapes[1].f1->data[i12 +
-            c_reshapes[1].f1->size[1] * i11];
-        }
-      }
-
-      // 'ClusterPoints2D:57' ptr(minInd,:) = [];
-      tmp_size[1] = 2;
-      tmp_size[0] = ptr_size[0];
-      loop_ub = 2 * ptr_size[0];
-      if (0 <= loop_ub - 1) {
-        memcpy(&SD->u2.f11.tmp_data[0], &ptr_data[0], (unsigned int)(loop_ub *
-                (int)sizeof(float)));
-      }
-
-      b_minInd_data[0] = minInd_data[0];
-      c_nullAssignment(SD, SD->u2.f11.tmp_data, tmp_size, b_minInd_data);
-      ptr_size[1] = 2;
-      ptr_size[0] = tmp_size[0];
-      loop_ub = tmp_size[1] * tmp_size[0];
-      if (0 <= loop_ub - 1) {
-        memcpy(&ptr_data[0], &SD->u2.f11.tmp_data[0], (unsigned int)(loop_ub *
-                (int)sizeof(float)));
       }
     } else {
-      // 'ClusterPoints2D:58' else
-      //  new cluster
-      // 'ClusterPoints2D:60' xs2 = ptr(minInd,1);
-      input_sizes_idx_0 = (minInd_data[0] - 1) << 1;
-
-      // 'ClusterPoints2D:61' cellArrayIndex = cellArrayIndex + 1;
-      cellArrayIndex++;
-
-      // 'ClusterPoints2D:62' clustersXs{cellArrayIndex} = xs2;
-      i11 = (int)cellArrayIndex - 1;
-      i12 = clustersXs_data[i11].f1->size[0] * clustersXs_data[(int)
-        cellArrayIndex - 1].f1->size[1];
-      clustersXs_data[(int)cellArrayIndex - 1].f1->size[1] = 1;
-      clustersXs_data[(int)cellArrayIndex - 1].f1->size[0] = 1;
-      emxEnsureCapacity_real32_T(clustersXs_data[(int)cellArrayIndex - 1].f1,
-        i12);
-      clustersXs_data[(int)cellArrayIndex - 1].f1->data[0] =
-        ptr_data[input_sizes_idx_0];
-
-      // 'ClusterPoints2D:64' ys2 = ptr(minInd,2);
-      minVal_data[0] = ptr_data[1 + input_sizes_idx_0];
-
-      // 'ClusterPoints2D:65' clustersYs{cellArrayIndex} = ys2;
-      i11 = clustersYs_data[i11].f1->size[0] * clustersYs_data[(int)
-        cellArrayIndex - 1].f1->size[1];
-      clustersYs_data[(int)cellArrayIndex - 1].f1->size[1] = 1;
-      clustersYs_data[(int)cellArrayIndex - 1].f1->size[0] = 1;
-      emxEnsureCapacity_real32_T(clustersYs_data[(int)cellArrayIndex - 1].f1,
-        i11);
-      clustersYs_data[(int)cellArrayIndex - 1].f1->data[0] = ptr_data[1 +
-        input_sizes_idx_0];
-
-      // 'ClusterPoints2D:67' ptr(minInd,:) = [];
-      tmp_size[1] = 2;
-      tmp_size[0] = ptr_size[0];
-      loop_ub = 2 * ptr_size[0];
-      if (0 <= loop_ub - 1) {
-        memcpy(&SD->u2.f11.tmp_data[0], &ptr_data[0], (unsigned int)(loop_ub *
-                (int)sizeof(float)));
-      }
-
-      b_minInd_data[0] = minInd_data[0];
-      c_nullAssignment(SD, SD->u2.f11.tmp_data, tmp_size, b_minInd_data);
-      ptr_size[1] = 2;
-      ptr_size[0] = tmp_size[0];
-      loop_ub = tmp_size[1] * tmp_size[0];
-      if (0 <= loop_ub - 1) {
-        memcpy(&ptr_data[0], &SD->u2.f11.tmp_data[0], (unsigned int)(loop_ub *
-                (int)sizeof(float)));
-      }
+      // 'ClusterPoints2D:79' status = true;
+      *status = true;
+      exitg1 = 1;
     }
-  }
+  } while (exitg1 == 0);
 
   emxFree_real32_T(&d_reshapes);
-  emxFreeMatrix_cell_wrap_3(c_reshapes);
-  emxFreeMatrix_cell_wrap_3(b_reshapes);
+  emxFreeMatrix_cell_wrap_4(c_reshapes);
+  emxFreeMatrix_cell_wrap_4(b_reshapes);
   emxFree_int32_T(&idx);
   emxFree_real32_T(&ex);
-  emxFreeMatrix_cell_wrap_3(reshapes);
+  emxFreeMatrix_cell_wrap_4(reshapes);
   emxFree_real32_T(&distanceMat);
 }
 
@@ -1448,7 +1456,7 @@ static void FilterPointCloudAccordingToZdifferences
 {
   int loop_ub;
   int i;
-  int iv1[1];
+  int iv0[1];
   float zMedian;
   int tmp_size[1];
   int b_tmp_size[1];
@@ -1464,8 +1472,8 @@ static void FilterPointCloudAccordingToZdifferences
   }
 
   // 'FilterPointCloudAccordingToZdifferences:9' zMedian = median(zCor);
-  iv1[0] = pc_size[0];
-  zMedian = median(SD, SD->u3.f15.tmp_data, iv1);
+  iv0[0] = pc_size[0];
+  zMedian = median(SD, SD->u3.f15.tmp_data, iv0);
 
   // 'FilterPointCloudAccordingToZdifferences:10' assert(numel(zMedian) == 1);
   // 'FilterPointCloudAccordingToZdifferences:11' inliearsInd = abs(zCor - zMedian) <= diffThreshold; 
@@ -1544,7 +1552,7 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
 {
   double trans[16];
   double dv0[16];
-  int i32;
+  int i31;
   int srcHomogenious_tmp;
   double temp_tmp;
   double xyzLimitsInXyzCoordinateSystem[6];
@@ -1555,16 +1563,17 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   int d_srcHomogenious_tmp;
   double c_temp_tmp;
   double d3;
-  int trueCount;
   double d4;
+  int trueCount;
 
   // 'SmartLoaderAlignPointCloud:6' if false
   // 'SmartLoaderAlignPointCloud:10' coder.varsize('indices', 'ptCloudSenceIntensity', [SmartLoaderCompilationConstants.MaxPointCloudSize 1], [1 0]); 
   // 'SmartLoaderAlignPointCloud:11' coder.varsize('xyzFiltered', 'ptCloudSenceXyz', [SmartLoaderCompilationConstants.MaxPointCloudSize 3], [1 0]); 
-  // 'SmartLoaderAlignPointCloud:13' if true
+  // 'SmartLoaderAlignPointCloud:13' if size(xyz,1) > SmartLoaderCompilationConstants.MaxPointCloudSize 
+  // 'SmartLoaderAlignPointCloud:21' if true
   //  first transform the xyz limits, then filter the points, then transform the points to the xyz aligned axis -  
   //  This process is faster than transform and filter.
-  // 'SmartLoaderAlignPointCloud:16' trans = [configParams.pcAlignmentProjMat; [0 0 0 1]]; 
+  // 'SmartLoaderAlignPointCloud:24' trans = [configParams.pcAlignmentProjMat; [0 0 0 1]]; 
   trans[0] = configParams_pcAlignmentProjMat[0];
   trans[1] = configParams_pcAlignmentProjMat[1];
   trans[2] = configParams_pcAlignmentProjMat[2];
@@ -1582,8 +1591,8 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   trans[14] = 0.0;
   trans[15] = 1.0;
 
-  // 'SmartLoaderAlignPointCloud:17' transInv = inv(trans);
-  // 'SmartLoaderAlignPointCloud:18' xyzLimitsInXyzCoordinateSystem3x2 = TransformPointsForward3DAffineCompiledVersion(transInv, configParams.xyzLimits'); 
+  // 'SmartLoaderAlignPointCloud:25' transInv = inv(trans);
+  // 'SmartLoaderAlignPointCloud:26' xyzLimitsInXyzCoordinateSystem3x2 = TransformPointsForward3DAffineCompiledVersion(transInv, configParams.xyzLimits'); 
   //  The function transform 3d points using affine transformation
   //  This implementation is special impelmentation for coder that supposes to run faster then projective transformation 
   // 'TransformPointsForward3DAffineCompiledVersion:5' coder.inline('always');
@@ -1600,34 +1609,34 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   // 'TransformPointsForward3DAffineCompiledVersion:20' srcHomogenious(:, 1:3) = src; 
   // 'TransformPointsForward3DAffineCompiledVersion:21' srcHomogenious(:, 4) = 1; 
   // 'TransformPointsForward3DAffineCompiledVersion:23' dst = srcHomogenious * affineTrans; 
-  // 'SmartLoaderAlignPointCloud:19' xyzLimitsInXyzCoordinateSystem = xyzLimitsInXyzCoordinateSystem3x2'; 
+  // 'SmartLoaderAlignPointCloud:27' xyzLimitsInXyzCoordinateSystem = xyzLimitsInXyzCoordinateSystem3x2'; 
   inv(trans, dv0);
-  for (i32 = 0; i32 < 2; i32++) {
-    srcHomogenious_tmp = i32 << 2;
-    srcHomogenious[srcHomogenious_tmp] = configParams_xyzLimits[i32];
+  for (i31 = 0; i31 < 2; i31++) {
+    srcHomogenious_tmp = i31 << 2;
+    srcHomogenious[srcHomogenious_tmp] = configParams_xyzLimits[i31];
     b_srcHomogenious_tmp = 1 + srcHomogenious_tmp;
-    srcHomogenious[b_srcHomogenious_tmp] = configParams_xyzLimits[i32 + 2];
+    srcHomogenious[b_srcHomogenious_tmp] = configParams_xyzLimits[i31 + 2];
     c_srcHomogenious_tmp = 2 + srcHomogenious_tmp;
-    srcHomogenious[c_srcHomogenious_tmp] = configParams_xyzLimits[i32 + 4];
+    srcHomogenious[c_srcHomogenious_tmp] = configParams_xyzLimits[i31 + 4];
     d_srcHomogenious_tmp = 3 + srcHomogenious_tmp;
     srcHomogenious[d_srcHomogenious_tmp] = 1.0;
-    xyzLimitsInXyzCoordinateSystem[i32] = 0.0;
-    xyzLimitsInXyzCoordinateSystem[i32] = ((dv0[0] *
+    xyzLimitsInXyzCoordinateSystem[i31] = 0.0;
+    xyzLimitsInXyzCoordinateSystem[i31] = ((dv0[0] *
       srcHomogenious[srcHomogenious_tmp] + dv0[1] *
       srcHomogenious[b_srcHomogenious_tmp]) + dv0[2] *
       srcHomogenious[c_srcHomogenious_tmp]) + dv0[3] *
       srcHomogenious[d_srcHomogenious_tmp];
-    xyzLimitsInXyzCoordinateSystem[i32 + 2] = 0.0;
-    xyzLimitsInXyzCoordinateSystem[i32 + 2] = ((dv0[4] * srcHomogenious[i32 << 2]
-      + dv0[5] * srcHomogenious[1 + (i32 << 2)]) + dv0[6] * srcHomogenious[2 +
-      (i32 << 2)]) + dv0[7] * srcHomogenious[3 + (i32 << 2)];
-    xyzLimitsInXyzCoordinateSystem[i32 + 4] = 0.0;
-    xyzLimitsInXyzCoordinateSystem[i32 + 4] = ((dv0[8] * srcHomogenious[i32 << 2]
-      + dv0[9] * srcHomogenious[1 + (i32 << 2)]) + dv0[10] * srcHomogenious[2 +
-      (i32 << 2)]) + dv0[11] * srcHomogenious[3 + (i32 << 2)];
+    xyzLimitsInXyzCoordinateSystem[i31 + 2] = 0.0;
+    xyzLimitsInXyzCoordinateSystem[i31 + 2] = ((dv0[4] * srcHomogenious[i31 << 2]
+      + dv0[5] * srcHomogenious[1 + (i31 << 2)]) + dv0[6] * srcHomogenious[2 +
+      (i31 << 2)]) + dv0[7] * srcHomogenious[3 + (i31 << 2)];
+    xyzLimitsInXyzCoordinateSystem[i31 + 4] = 0.0;
+    xyzLimitsInXyzCoordinateSystem[i31 + 4] = ((dv0[8] * srcHomogenious[i31 << 2]
+      + dv0[9] * srcHomogenious[1 + (i31 << 2)]) + dv0[10] * srcHomogenious[2 +
+      (i31 << 2)]) + dv0[11] * srcHomogenious[3 + (i31 << 2)];
   }
 
-  // 'SmartLoaderAlignPointCloud:20' xyzLimitsInXyzCoordinateSystemMinMax = [min(xyzLimitsInXyzCoordinateSystem, [], 2) max(xyzLimitsInXyzCoordinateSystem, [], 2)]; 
+  // 'SmartLoaderAlignPointCloud:28' xyzLimitsInXyzCoordinateSystemMinMax = [min(xyzLimitsInXyzCoordinateSystem, [], 2) max(xyzLimitsInXyzCoordinateSystem, [], 2)]; 
   temp_tmp = xyzLimitsInXyzCoordinateSystem[0];
   if (xyzLimitsInXyzCoordinateSystem[0] > xyzLimitsInXyzCoordinateSystem[1]) {
     temp_tmp = xyzLimitsInXyzCoordinateSystem[1];
@@ -1663,15 +1672,15 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   }
 
   //  Take the min and max because we flip the axis
-  // 'SmartLoaderAlignPointCloud:23' indices = xyz(:,1) >= xyzLimitsInXyzCoordinateSystemMinMax(1,1) & xyz(:,1) <= xyzLimitsInXyzCoordinateSystemMinMax(1,2) & ... 
-  // 'SmartLoaderAlignPointCloud:24'         xyz(:,2) >= xyzLimitsInXyzCoordinateSystemMinMax(2,1) & xyz(:,2) <= xyzLimitsInXyzCoordinateSystemMinMax(2,2) & ... 
-  // 'SmartLoaderAlignPointCloud:25'         xyz(:,3) >= xyzLimitsInXyzCoordinateSystemMinMax(3,1) & xyz(:,3) <= xyzLimitsInXyzCoordinateSystemMinMax(3,2); 
+  // 'SmartLoaderAlignPointCloud:31' indices = xyz(:,1) >= xyzLimitsInXyzCoordinateSystemMinMax(1,1) & xyz(:,1) <= xyzLimitsInXyzCoordinateSystemMinMax(1,2) & ... 
+  // 'SmartLoaderAlignPointCloud:32'         xyz(:,2) >= xyzLimitsInXyzCoordinateSystemMinMax(2,1) & xyz(:,2) <= xyzLimitsInXyzCoordinateSystemMinMax(2,2) & ... 
+  // 'SmartLoaderAlignPointCloud:33'         xyz(:,3) >= xyzLimitsInXyzCoordinateSystemMinMax(3,1) & xyz(:,3) <= xyzLimitsInXyzCoordinateSystemMinMax(3,2); 
   srcHomogenious_tmp = xyz_size[0];
-  for (i32 = 0; i32 < srcHomogenious_tmp; i32++) {
-    c_temp_tmp = xyz_data[3 * i32];
-    d3 = xyz_data[1 + 3 * i32];
-    d4 = xyz_data[2 + 3 * i32];
-    SD->u1.f10.indices_data[i32] = ((c_temp_tmp >=
+  for (i31 = 0; i31 < srcHomogenious_tmp; i31++) {
+    c_temp_tmp = xyz_data[3 * i31];
+    d3 = xyz_data[1 + 3 * i31];
+    d4 = xyz_data[2 + 3 * i31];
+    SD->u1.f10.indices_data[i31] = ((c_temp_tmp >=
       xyzLimitsInXyzCoordinateSystem[0]) && (c_temp_tmp <=
       xyzLimitsInXyzCoordinateSystem[1]) && (d3 >=
       xyzLimitsInXyzCoordinateSystem[2]) && (d3 <=
@@ -1679,7 +1688,8 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
       b_temp_tmp));
   }
 
-  // 'SmartLoaderAlignPointCloud:27' xyzFiltered = xyz(indices,:);
+  //  sum(indices)
+  // 'SmartLoaderAlignPointCloud:36' xyzFiltered = xyz(indices,:);
   srcHomogenious_tmp = xyz_size[0] - 1;
   trueCount = 0;
   for (c_srcHomogenious_tmp = 0; c_srcHomogenious_tmp <= srcHomogenious_tmp;
@@ -1698,9 +1708,9 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
     }
   }
 
-  // 'SmartLoaderAlignPointCloud:28' if false
-  // 'SmartLoaderAlignPointCloud:32' else
-  // 'SmartLoaderAlignPointCloud:33' ptCloudSenceIntensity = cast(intensity(indices,:), 'single'); 
+  // 'SmartLoaderAlignPointCloud:37' if false
+  // 'SmartLoaderAlignPointCloud:41' else
+  // 'SmartLoaderAlignPointCloud:42' ptCloudSenceIntensity = cast(intensity(indices,:), 'single'); 
   srcHomogenious_tmp = xyz_size[0] - 1;
   d_srcHomogenious_tmp = 0;
   for (c_srcHomogenious_tmp = 0; c_srcHomogenious_tmp <= srcHomogenious_tmp;
@@ -1720,12 +1730,12 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   }
 
   ptCloudSenceIntensity_size[0] = d_srcHomogenious_tmp;
-  for (i32 = 0; i32 < d_srcHomogenious_tmp; i32++) {
-    ptCloudSenceIntensity_data[i32] = (float)intensity_data
-      [SD->u1.f10.b_tmp_data[i32] - 1];
+  for (i31 = 0; i31 < d_srcHomogenious_tmp; i31++) {
+    ptCloudSenceIntensity_data[i31] = (float)intensity_data
+      [SD->u1.f10.b_tmp_data[i31] - 1];
   }
 
-  // 'SmartLoaderAlignPointCloud:34' ptCloudSenceXyz = cast(TransformPointsForward3DAffineCompiledVersion(trans, xyzFiltered), 'single'); 
+  // 'SmartLoaderAlignPointCloud:43' ptCloudSenceXyz = cast(TransformPointsForward3DAffineCompiledVersion(trans, xyzFiltered), 'single'); 
   //  The function transform 3d points using affine transformation
   //  This implementation is special impelmentation for coder that supposes to run faster then projective transformation 
   // 'TransformPointsForward3DAffineCompiledVersion:5' coder.inline('always');
@@ -1740,9 +1750,9 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   // 'TransformPointsForward3DAffineCompiledVersion:17' affineTrans = trans(1:3,:)'; 
   // 'TransformPointsForward3DAffineCompiledVersion:19' srcHomogenious = coder.nullcopy(zeros(size(src,1), 4)); 
   // 'TransformPointsForward3DAffineCompiledVersion:20' srcHomogenious(:, 1:3) = src; 
-  for (i32 = 0; i32 < trueCount; i32++) {
-    srcHomogenious_tmp = 3 * (SD->u1.f10.tmp_data[i32] - 1);
-    b_srcHomogenious_tmp = i32 << 2;
+  for (i31 = 0; i31 < trueCount; i31++) {
+    srcHomogenious_tmp = 3 * (SD->u1.f10.tmp_data[i31] - 1);
+    b_srcHomogenious_tmp = i31 << 2;
     SD->u1.f10.srcHomogenious_data[b_srcHomogenious_tmp] =
       xyz_data[srcHomogenious_tmp];
     SD->u1.f10.srcHomogenious_data[1 + b_srcHomogenious_tmp] = xyz_data[1 +
@@ -1752,8 +1762,8 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   }
 
   // 'TransformPointsForward3DAffineCompiledVersion:21' srcHomogenious(:, 4) = 1; 
-  for (i32 = 0; i32 < trueCount; i32++) {
-    SD->u1.f10.srcHomogenious_data[3 + (i32 << 2)] = 1.0;
+  for (i31 = 0; i31 < trueCount; i31++) {
+    SD->u1.f10.srcHomogenious_data[3 + (i31 << 2)] = 1.0;
   }
 
   // 'TransformPointsForward3DAffineCompiledVersion:23' dst = srcHomogenious * affineTrans; 
@@ -1780,22 +1790,22 @@ static void SmartLoaderAlignPointCloud(PerceptionSmartLoaderStackData *SD,
   ptCloudSenceXyz_size[1] = 3;
   ptCloudSenceXyz_size[0] = trueCount;
   srcHomogenious_tmp = 3 * trueCount;
-  for (i32 = 0; i32 < srcHomogenious_tmp; i32++) {
-    ptCloudSenceXyz_data[i32] = (float)SD->u1.f10.dst_data[i32];
+  for (i31 = 0; i31 < srcHomogenious_tmp; i31++) {
+    ptCloudSenceXyz_data[i31] = (float)SD->u1.f10.dst_data[i31];
   }
 
   //  figure, PlotPointCloud([ptCloudSenceXyz double(ptCloudSenceIntensity)])
-  // 'SmartLoaderAlignPointCloud:52' if size(ptCloudSenceXyz,1) < configParams.minNumPointsInPc 
+  // 'SmartLoaderAlignPointCloud:61' if size(ptCloudSenceXyz,1) < configParams.minNumPointsInPc 
   if (trueCount < configParams_minNumPointsInPc) {
     //  || configParams.debugIsPlayerMode
-    // 'SmartLoaderAlignPointCloud:53' if size(ptCloudSenceXyz,1) < configParams.minNumPointsInPc && coder.target('Matlab') 
-    // 'SmartLoaderAlignPointCloud:56' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailedNotEnoughPoints; 
+    // 'SmartLoaderAlignPointCloud:62' if size(ptCloudSenceXyz,1) < configParams.minNumPointsInPc && coder.target('Matlab') 
+    // 'SmartLoaderAlignPointCloud:65' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailedNotEnoughPoints; 
     smartLoaderStruct->status =
       PerceptionSmartLoaderReturnValue_eFailedNotEnoughPoints;
   }
 
   //  Fit plane to the points inside the ROI
-  // 'SmartLoaderAlignPointCloud:60' if false
+  // 'SmartLoaderAlignPointCloud:69' if false
 }
 
 //
@@ -1829,15 +1839,15 @@ static void SmartLoaderCalcEigen(PerceptionSmartLoaderStackData *SD, const float
   int ar;
   boolean_T b1;
   boolean_T b2;
+  int i24;
   int i25;
-  int i26;
   boolean_T b3;
   boolean_T b4;
-  int i27;
+  int i26;
   int w;
+  int i27;
   int i28;
   int i29;
-  int i30;
 
   // 'SmartLoaderCalcEigen:5' coder.varsize('covMatrix', 'V', 'D', [2 2], [0 0]); 
   // 'SmartLoaderCalcEigen:6' covMatrixOutputInfInf = cov(xy);
@@ -1938,50 +1948,50 @@ static void SmartLoaderCalcEigen(PerceptionSmartLoaderStackData *SD, const float
           temp = 0.0F;
           b1 = true;
           b2 = (x_size_idx_0 <= 0);
-          i25 = x_size_idx_0 << 1;
-          i26 = 0;
+          i24 = x_size_idx_0 << 1;
+          i25 = 0;
           b3 = true;
           b4 = (x_size_idx_0 <= 0);
-          i27 = 0;
+          i26 = 0;
           for (w = 0; w <= m; w++) {
-            if (b4 || (w >= i25)) {
-              i27 = 0;
+            if (b4 || (w >= i24)) {
+              i26 = 0;
               b3 = true;
             } else if (b3) {
               b3 = false;
-              i27 = ((w % x_size_idx_0) << 1) + w / x_size_idx_0;
+              i26 = ((w % x_size_idx_0) << 1) + w / x_size_idx_0;
             } else {
-              i28 = (x_size_idx_0 << 1) - 1;
-              if (i27 > 2147483645) {
-                i27 = ((w % x_size_idx_0) << 1) + w / x_size_idx_0;
+              i27 = (x_size_idx_0 << 1) - 1;
+              if (i26 > 2147483645) {
+                i26 = ((w % x_size_idx_0) << 1) + w / x_size_idx_0;
               } else {
-                i27 += 2;
-                if (i27 > i28) {
-                  i27 -= i28;
+                i26 += 2;
+                if (i26 > i27) {
+                  i26 -= i27;
                 }
               }
             }
 
-            i28 = w + ar;
-            if (b2 || (i28 < 0) || (i28 >= i25)) {
-              i26 = 0;
+            i27 = w + ar;
+            if (b2 || (i27 < 0) || (i27 >= i24)) {
+              i25 = 0;
               b1 = true;
             } else if (b1) {
               b1 = false;
-              i26 = ((i28 % x_size_idx_0) << 1) + i28 / x_size_idx_0;
+              i25 = ((i27 % x_size_idx_0) << 1) + i27 / x_size_idx_0;
             } else {
-              i29 = (x_size_idx_0 << 1) - 1;
-              if (i26 > 2147483645) {
-                i26 = ((i28 % x_size_idx_0) << 1) + i28 / x_size_idx_0;
+              i28 = (x_size_idx_0 << 1) - 1;
+              if (i25 > 2147483645) {
+                i25 = ((i27 % x_size_idx_0) << 1) + i27 / x_size_idx_0;
               } else {
-                i26 += 2;
-                if (i26 > i29) {
-                  i26 -= i29;
+                i25 += 2;
+                if (i25 > i28) {
+                  i25 -= i28;
                 }
               }
             }
 
-            temp += SD->u1.f0.x_data[i26] * SD->u1.f0.x_data[i27];
+            temp += SD->u1.f0.x_data[i25] * SD->u1.f0.x_data[i26];
           }
 
           c[loop_ub] += muj_tmp * temp;
@@ -2005,52 +2015,52 @@ static void SmartLoaderCalcEigen(PerceptionSmartLoaderStackData *SD, const float
           temp = 0.0F;
           b1 = true;
           b2 = (x_size_idx_0 <= 0);
-          i25 = x_size_idx_0 << 1;
-          i26 = 0;
+          i24 = x_size_idx_0 << 1;
+          i25 = 0;
           b3 = true;
           b4 = (x_size_idx_0 <= 0);
-          i28 = x_size_idx_0 << 1;
-          i27 = 0;
+          i27 = x_size_idx_0 << 1;
+          i26 = 0;
           for (w = 0; w <= m; w++) {
-            i29 = w + LDA;
-            if (b4 || (i29 < 0) || (i29 >= i28)) {
-              i27 = 0;
+            i28 = w + LDA;
+            if (b4 || (i28 < 0) || (i28 >= i27)) {
+              i26 = 0;
               b3 = true;
             } else if (b3) {
               b3 = false;
-              i27 = ((i29 % x_size_idx_0) << 1) + i29 / x_size_idx_0;
+              i26 = ((i28 % x_size_idx_0) << 1) + i28 / x_size_idx_0;
             } else {
-              i30 = (x_size_idx_0 << 1) - 1;
-              if (i27 > 2147483645) {
-                i27 = ((i29 % x_size_idx_0) << 1) + i29 / x_size_idx_0;
+              i29 = (x_size_idx_0 << 1) - 1;
+              if (i26 > 2147483645) {
+                i26 = ((i28 % x_size_idx_0) << 1) + i28 / x_size_idx_0;
               } else {
-                i27 += 2;
-                if (i27 > i30) {
-                  i27 -= i30;
+                i26 += 2;
+                if (i26 > i29) {
+                  i26 -= i29;
                 }
               }
             }
 
-            i29 = w + ar;
-            if (b2 || (i29 < 0) || (i29 >= i25)) {
-              i26 = 0;
+            i28 = w + ar;
+            if (b2 || (i28 < 0) || (i28 >= i24)) {
+              i25 = 0;
               b1 = true;
             } else if (b1) {
               b1 = false;
-              i26 = ((i29 % x_size_idx_0) << 1) + i29 / x_size_idx_0;
+              i25 = ((i28 % x_size_idx_0) << 1) + i28 / x_size_idx_0;
             } else {
-              i30 = (x_size_idx_0 << 1) - 1;
-              if (i26 > 2147483645) {
-                i26 = ((i29 % x_size_idx_0) << 1) + i29 / x_size_idx_0;
+              i29 = (x_size_idx_0 << 1) - 1;
+              if (i25 > 2147483645) {
+                i25 = ((i28 % x_size_idx_0) << 1) + i28 / x_size_idx_0;
               } else {
-                i26 += 2;
-                if (i26 > i30) {
-                  i26 -= i30;
+                i25 += 2;
+                if (i25 > i29) {
+                  i25 -= i29;
                 }
               }
             }
 
-            temp += SD->u1.f0.x_data[i26] * SD->u1.f0.x_data[i27];
+            temp += SD->u1.f0.x_data[i25] * SD->u1.f0.x_data[i26];
           }
 
           c[loop_ub] += muj_tmp * temp;
@@ -2101,139 +2111,326 @@ static void SmartLoaderCreateHeightMap(PerceptionSmartLoaderStackData *SD,
   const float xyz_data[], const int xyz_size[2], float heightMap_res_data[], int
   heightMap_res_size[2])
 {
-  boolean_T bv0[2];
-  double siz_idx_0;
-  double siz_idx_1;
+  double imgDims[2];
+  boolean_T b_imgDims[2];
+  emxArray_int32_T *colInd;
+  emxArray_int32_T *y;
+  emxArray_int32_T *v1;
+  emxArray_int32_T *vk;
+  int i32;
   int i33;
-  int loop_ub;
-  int xyRounded_size[2];
-  int k0;
-  int trueCount;
-  int i;
+  int xyRounded_data_tmp;
   int nb;
-  int result;
+  int loop_ub;
   boolean_T empty_non_axis_sizes;
+  boolean_T b5;
+  int hoistedGlobal_size[2];
+  int k0;
   int input_sizes_idx_1;
-  int subs[2];
-  cell_wrap_3 reshapes[2];
-  int i34;
-  int i35;
+  int trueCount;
+  int result;
+  cell_wrap_4 reshapes[2];
   signed char sizes_idx_1;
   emxArray_real32_T *b_result;
   int xyzInsideImg_size[2];
   int col_size[2];
   int col_data[3];
   int imgLinearInd_size[1];
+  int xyRounded_size[2];
   int idx_size[1];
   emxArray_real_T *missingPixels;
   int xyzSortedUnique_size[2];
   emxArray_real_T *Idx;
-  boolean_T b5;
   boolean_T b6;
+  boolean_T b7;
 
   // 'SmartLoaderCreateHeightMap:3' coder.varsize('heightMap_res', [SmartLoaderCompilationConstants.HeightMapMaxDimSize SmartLoaderCompilationConstants.HeightMapMaxDimSize], [1 1]); 
   //  Create the height image
-  // 'SmartLoaderCreateHeightMap:8' if isempty(imgDimsPersistent)
-  if (!SD->pd->imgDimsPersistent_not_empty) {
-    // 'SmartLoaderCreateHeightMap:9' imgDimsPersistent = ceil((configParams.xyzLimits(1:2,2) - configParams.xyzLimits(1:2,1)) / configParams.heightMapResolutionMeterToPixel); 
-    SD->pd->imgDimsPersistent[0] = (configParams_xyzLimits[1] -
-      configParams_xyzLimits[0]) / configParams_heightMapResolutionMeterToPixel;
-    SD->pd->imgDimsPersistent[1] = (configParams_xyzLimits[3] -
-      configParams_xyzLimits[2]) / configParams_heightMapResolutionMeterToPixel;
-    SD->pd->imgDimsPersistent[0] = std::ceil(SD->pd->imgDimsPersistent[0]);
-    SD->pd->imgDimsPersistent[1] = std::ceil(SD->pd->imgDimsPersistent[1]);
-    SD->pd->imgDimsPersistent_not_empty = true;
-  }
+  // 'SmartLoaderCreateHeightMap:7' imgDims = ceil((configParams.xyzLimits(1:2,2) - configParams.xyzLimits(1:2,1)) / configParams.heightMapResolutionMeterToPixel); 
+  imgDims[0] = (configParams_xyzLimits[1] - configParams_xyzLimits[0]) /
+    configParams_heightMapResolutionMeterToPixel;
+  imgDims[1] = (configParams_xyzLimits[3] - configParams_xyzLimits[2]) /
+    configParams_heightMapResolutionMeterToPixel;
+  b_ceil(imgDims);
 
-  // 'SmartLoaderCreateHeightMap:12' if any(int32(imgDimsPersistent') > SmartLoaderCompilationConstants.HeightMapMaxDimSize) 
-  bv0[0] = ((int)rt_roundd(SD->pd->imgDimsPersistent[0]) > 2048);
-  bv0[1] = ((int)rt_roundd(SD->pd->imgDimsPersistent[1]) > 2048);
-  if (any(bv0)) {
-    // 'SmartLoaderCreateHeightMap:13' heightMap_res = zeros(0,0,'single');
+  // 'SmartLoaderCreateHeightMap:9' if any(int32(imgDims') > SmartLoaderCompilationConstants.HeightMapMaxDimSize) 
+  b_imgDims[0] = ((int)rt_roundd(imgDims[0]) > 2048);
+  b_imgDims[1] = ((int)rt_roundd(imgDims[1]) > 2048);
+  if (any(b_imgDims)) {
+    // 'SmartLoaderCreateHeightMap:10' heightMap_res = zeros(0,0,'single');
     heightMap_res_size[1] = 0;
     heightMap_res_size[0] = 0;
   } else {
     //  Note the dim flip
-    // 'SmartLoaderCreateHeightMap:19' if isempty(heightMap_resPersistent)
+    // 'SmartLoaderCreateHeightMap:16' if isempty(heightMap_resPersistent)
+    emxInit_int32_T(&colInd, 2);
+    emxInit_int32_T(&y, 2);
+    emxInit_int32_T(&v1, 2);
+    emxInit_int32_T(&vk, 2);
     if (!SD->pd->heightMap_resPersistent_not_empty) {
-      // 'SmartLoaderCreateHeightMap:20' heightMap_resPersistent = ones([imgDimsPersistent(2) imgDimsPersistent(1)],'single')*PcClassificationCompilationConstants.MaxMapInvalidValue; 
-      siz_idx_0 = SD->pd->imgDimsPersistent[1];
-      siz_idx_1 = SD->pd->imgDimsPersistent[0];
-      i33 = SD->pd->heightMap_resPersistent->size[0] * SD->
+      // 'SmartLoaderCreateHeightMap:17' heightMap_resPersistent = ones([imgDims(2) imgDims(1)],'single')*PcClassificationCompilationConstants.MaxMapInvalidValue; 
+      i32 = SD->pd->heightMap_resPersistent->size[0] * SD->
         pd->heightMap_resPersistent->size[1];
-      SD->pd->heightMap_resPersistent->size[1] = (int)SD->pd->imgDimsPersistent
-        [0];
-      SD->pd->heightMap_resPersistent->size[0] = (int)SD->pd->imgDimsPersistent
-        [1];
-      emxEnsureCapacity_real32_T(SD->pd->heightMap_resPersistent, i33);
-      loop_ub = (int)siz_idx_1 * (int)siz_idx_0;
-      for (i33 = 0; i33 < loop_ub; i33++) {
-        SD->pd->heightMap_resPersistent->data[i33] = -1024.0F;
+      i33 = (int)imgDims[0];
+      SD->pd->heightMap_resPersistent->size[1] = i33;
+      xyRounded_data_tmp = (int)imgDims[1];
+      SD->pd->heightMap_resPersistent->size[0] = xyRounded_data_tmp;
+      emxEnsureCapacity_real32_T(SD->pd->heightMap_resPersistent, i32);
+      nb = i33 * xyRounded_data_tmp;
+      for (i32 = 0; i32 < nb; i32++) {
+        SD->pd->heightMap_resPersistent->data[i32] = -1024.0F;
       }
 
       SD->pd->heightMap_resPersistent_not_empty = ((SD->
         pd->heightMap_resPersistent->size[0] != 0) && (SD->
         pd->heightMap_resPersistent->size[1] != 0));
+
+      // 'SmartLoaderCreateHeightMap:19' [rowInd, colInd] = ind2sub(size(heightMap_resPersistent), 1:numel(heightMap_resPersistent)); 
+      nb = SD->pd->heightMap_resPersistent->size[1];
+      hoistedGlobal_size[1] = SD->pd->heightMap_resPersistent->size[0];
+      k0 = SD->pd->heightMap_resPersistent->size[0];
+      nb *= k0;
+      if (nb < 1) {
+        y->size[1] = 0;
+        y->size[0] = 1;
+      } else {
+        i32 = y->size[0] * y->size[1];
+        y->size[1] = nb;
+        y->size[0] = 1;
+        emxEnsureCapacity_int32_T(y, i32);
+        for (i32 = 0; i32 < nb; i32++) {
+          y->data[i32] = 1 + i32;
+        }
+      }
+
+      k0 = hoistedGlobal_size[1];
+      i32 = v1->size[0] * v1->size[1];
+      v1->size[1] = y->size[1];
+      v1->size[0] = 1;
+      emxEnsureCapacity_int32_T(v1, i32);
+      loop_ub = y->size[1] * y->size[0];
+      for (i32 = 0; i32 < loop_ub; i32++) {
+        v1->data[i32] = y->data[i32] - 1;
+      }
+
+      i32 = vk->size[0] * vk->size[1];
+      vk->size[1] = v1->size[1];
+      vk->size[0] = 1;
+      emxEnsureCapacity_int32_T(vk, i32);
+      loop_ub = v1->size[1] * v1->size[0];
+      for (i32 = 0; i32 < loop_ub; i32++) {
+        vk->data[i32] = div_s32(v1->data[i32], k0);
+      }
+
+      i32 = v1->size[1] * v1->size[0];
+      i33 = v1->size[0] * v1->size[1];
+      v1->size[0] = 1;
+      emxEnsureCapacity_int32_T(v1, i33);
+      loop_ub = i32 - 1;
+      for (i32 = 0; i32 <= loop_ub; i32++) {
+        v1->data[i32] -= vk->data[i32] * k0;
+      }
+
+      i32 = y->size[0] * y->size[1];
+      y->size[1] = v1->size[1];
+      y->size[0] = 1;
+      emxEnsureCapacity_int32_T(y, i32);
+      loop_ub = v1->size[1] * v1->size[0];
+      for (i32 = 0; i32 < loop_ub; i32++) {
+        y->data[i32] = v1->data[i32] + 1;
+      }
+
+      i32 = colInd->size[0] * colInd->size[1];
+      colInd->size[1] = vk->size[1];
+      colInd->size[0] = 1;
+      emxEnsureCapacity_int32_T(colInd, i32);
+      loop_ub = vk->size[1] * vk->size[0];
+      for (i32 = 0; i32 < loop_ub; i32++) {
+        colInd->data[i32] = vk->data[i32] + 1;
+      }
+
+      // 'SmartLoaderCreateHeightMap:20' allImgInds = [colInd', rowInd'];
+      nb = colInd->size[1];
+      k0 = y->size[1];
+      i32 = SD->pd->allImgInds->size[0] * SD->pd->allImgInds->size[1];
+      SD->pd->allImgInds->size[1] = 2;
+      SD->pd->allImgInds->size[0] = nb;
+      emxEnsureCapacity_real_T(SD->pd->allImgInds, i32);
+      for (i32 = 0; i32 < nb; i32++) {
+        SD->pd->allImgInds->data[i32 << 1] = colInd->data[i32];
+      }
+
+      for (i32 = 0; i32 < k0; i32++) {
+        SD->pd->allImgInds->data[1 + (i32 << 1)] = y->data[i32];
+      }
     }
 
-    // 'SmartLoaderCreateHeightMap:22' heightMap_res = heightMap_resPersistent;
+    //  Use the next condition statment in order to avoid
+    // 'SmartLoaderCreateHeightMap:23' if ~isequal(size(heightMap_resPersistent),imgDims) 
+    // 'SmartLoaderCreateHeightMap:24' heightMap_resPersistent = ones([imgDims(2) imgDims(1)],'single')*PcClassificationCompilationConstants.MaxMapInvalidValue; 
+    i32 = SD->pd->heightMap_resPersistent->size[0] * SD->
+      pd->heightMap_resPersistent->size[1];
+    SD->pd->heightMap_resPersistent->size[1] = (int)imgDims[0];
+    SD->pd->heightMap_resPersistent->size[0] = (int)imgDims[1];
+    emxEnsureCapacity_real32_T(SD->pd->heightMap_resPersistent, i32);
+    loop_ub = (int)imgDims[0] * (int)imgDims[1];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      SD->pd->heightMap_resPersistent->data[i32] = -1024.0F;
+    }
+
+    empty_non_axis_sizes = (SD->pd->heightMap_resPersistent->size[0] == 0);
+    b5 = (SD->pd->heightMap_resPersistent->size[1] == 0);
+    SD->pd->heightMap_resPersistent_not_empty = ((!empty_non_axis_sizes) && (!b5));
+
+    // 'SmartLoaderCreateHeightMap:26' [rowInd, colInd] = ind2sub(size(heightMap_resPersistent), 1:numel(heightMap_resPersistent)); 
+    nb = SD->pd->heightMap_resPersistent->size[1];
+    hoistedGlobal_size[1] = SD->pd->heightMap_resPersistent->size[0];
+    k0 = SD->pd->heightMap_resPersistent->size[0];
+    nb *= k0;
+    if (nb < 1) {
+      y->size[1] = 0;
+      y->size[0] = 1;
+    } else {
+      i32 = y->size[0] * y->size[1];
+      y->size[1] = nb;
+      y->size[0] = 1;
+      emxEnsureCapacity_int32_T(y, i32);
+      for (i32 = 0; i32 < nb; i32++) {
+        y->data[i32] = 1 + i32;
+      }
+    }
+
+    k0 = hoistedGlobal_size[1];
+    i32 = v1->size[0] * v1->size[1];
+    v1->size[1] = y->size[1];
+    v1->size[0] = 1;
+    emxEnsureCapacity_int32_T(v1, i32);
+    loop_ub = y->size[1] * y->size[0];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      v1->data[i32] = y->data[i32] - 1;
+    }
+
+    i32 = vk->size[0] * vk->size[1];
+    vk->size[1] = v1->size[1];
+    vk->size[0] = 1;
+    emxEnsureCapacity_int32_T(vk, i32);
+    loop_ub = v1->size[1] * v1->size[0];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      vk->data[i32] = div_s32(v1->data[i32], k0);
+    }
+
+    i32 = v1->size[1] * v1->size[0];
+    i33 = v1->size[0] * v1->size[1];
+    v1->size[0] = 1;
+    emxEnsureCapacity_int32_T(v1, i33);
+    loop_ub = i32 - 1;
+    for (i32 = 0; i32 <= loop_ub; i32++) {
+      v1->data[i32] -= vk->data[i32] * k0;
+    }
+
+    i32 = y->size[0] * y->size[1];
+    y->size[1] = v1->size[1];
+    y->size[0] = 1;
+    emxEnsureCapacity_int32_T(y, i32);
+    loop_ub = v1->size[1] * v1->size[0];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      y->data[i32] = v1->data[i32] + 1;
+    }
+
+    emxFree_int32_T(&v1);
+    i32 = colInd->size[0] * colInd->size[1];
+    colInd->size[1] = vk->size[1];
+    colInd->size[0] = 1;
+    emxEnsureCapacity_int32_T(colInd, i32);
+    loop_ub = vk->size[1] * vk->size[0];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      colInd->data[i32] = vk->data[i32] + 1;
+    }
+
+    emxFree_int32_T(&vk);
+
+    // 'SmartLoaderCreateHeightMap:27' allImgInds = [colInd', rowInd'];
+    nb = colInd->size[1];
+    k0 = y->size[1];
+    i32 = SD->pd->allImgInds->size[0] * SD->pd->allImgInds->size[1];
+    SD->pd->allImgInds->size[1] = 2;
+    SD->pd->allImgInds->size[0] = nb;
+    emxEnsureCapacity_real_T(SD->pd->allImgInds, i32);
+    for (i32 = 0; i32 < nb; i32++) {
+      SD->pd->allImgInds->data[i32 << 1] = colInd->data[i32];
+    }
+
+    emxFree_int32_T(&colInd);
+    for (i32 = 0; i32 < k0; i32++) {
+      SD->pd->allImgInds->data[1 + (i32 << 1)] = y->data[i32];
+    }
+
+    emxFree_int32_T(&y);
+
+    // 'SmartLoaderCreateHeightMap:30' heightMap_res = heightMap_resPersistent;
     heightMap_res_size[1] = SD->pd->heightMap_resPersistent->size[1];
     heightMap_res_size[0] = SD->pd->heightMap_resPersistent->size[0];
     loop_ub = SD->pd->heightMap_resPersistent->size[1] * SD->
       pd->heightMap_resPersistent->size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
-      heightMap_res_data[i33] = SD->pd->heightMap_resPersistent->data[i33];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      heightMap_res_data[i32] = SD->pd->heightMap_resPersistent->data[i32];
     }
 
     //  Plus 1 because matlab indexes start from one
     //  Note: cast in matlab works like round commnad
-    // 'SmartLoaderCreateHeightMap:26' xyRounded = round(cast(1, 'like', xyz) + xyz(:,1:2)/cast(configParams.heightMapResolutionMeterToPixel, 'like', xyz)); 
+    // 'SmartLoaderCreateHeightMap:34' xyRounded = round(cast(1, 'like', xyz) + xyz(:,1:2)/cast(configParams.heightMapResolutionMeterToPixel, 'like', xyz)); 
     loop_ub = xyz_size[0];
-    xyRounded_size[1] = 2;
-    xyRounded_size[0] = xyz_size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
-      k0 = i33 << 1;
-      SD->f22.xyRounded_data[k0] = 1.0F + xyz_data[3 * i33] / (float)
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      k0 = i32 << 1;
+      SD->f22.xyRounded_data[k0] = 1.0F + xyz_data[3 * i32] / (float)
         configParams_heightMapResolutionMeterToPixel;
-      SD->f22.xyRounded_data[1 + k0] = 1.0F + xyz_data[1 + 3 * i33] / (float)
+      SD->f22.xyRounded_data[1 + k0] = 1.0F + xyz_data[1 + 3 * i32] / (float)
         configParams_heightMapResolutionMeterToPixel;
     }
 
-    b_round(SD->f22.xyRounded_data, xyRounded_size);
+    i32 = xyz_size[0];
+    for (input_sizes_idx_1 = 0; input_sizes_idx_1 < i32; input_sizes_idx_1++) {
+      k0 = input_sizes_idx_1 << 1;
+      SD->f22.xyRounded_data[k0] = rt_roundf(SD->f22.xyRounded_data[k0]);
+      k0++;
+      SD->f22.xyRounded_data[k0] = rt_roundf(SD->f22.xyRounded_data[k0]);
+    }
 
     //  remove everything that is outside the image boundery
-    // 'SmartLoaderCreateHeightMap:29' insideBounderyInd = xyRounded(:,1) > 0 & xyRounded(:,1) <= imgDimsPersistent(1) & xyRounded(:,2) > 0 & xyRounded(:,2) <= imgDimsPersistent(2); 
-    loop_ub = xyRounded_size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
-      k0 = i33 << 1;
-      SD->f22.d_tmp_data[i33] = ((SD->f22.xyRounded_data[k0] > 0.0F) &&
-        (SD->f22.xyRounded_data[k0] <= SD->pd->imgDimsPersistent[0]) &&
-        (SD->f22.xyRounded_data[1 + k0] > 0.0F));
+    // 'SmartLoaderCreateHeightMap:37' insideBounderyInd = xyRounded(:,1) > 0 & xyRounded(:,1) <= imgDims(1) & xyRounded(:,2) > 0 & xyRounded(:,2) <= imgDims(2); 
+    loop_ub = xyz_size[0];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      nb = i32 << 1;
+      SD->f22.d_tmp_data[i32] = ((SD->f22.xyRounded_data[nb] > 0.0F) &&
+        (SD->f22.xyRounded_data[nb] <= imgDims[0]) && (SD->f22.xyRounded_data[1
+        + nb] > 0.0F));
     }
 
-    loop_ub = xyRounded_size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
-      SD->f22.e_tmp_data[i33] = (SD->f22.xyRounded_data[1 + (i33 << 1)] <=
-        SD->pd->imgDimsPersistent[1]);
+    loop_ub = xyz_size[0];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      SD->f22.e_tmp_data[i32] = (SD->f22.xyRounded_data[1 + (i32 << 1)] <=
+        imgDims[1]);
     }
 
     //  sum(removeInd)
-    // 'SmartLoaderCreateHeightMap:31' xyInside = xyRounded(insideBounderyInd, :); 
-    // 'SmartLoaderCreateHeightMap:32' zInside = xyz(insideBounderyInd, 3);
-    // 'SmartLoaderCreateHeightMap:34' xyzInsideImg = [xyInside zInside];
-    k0 = xyRounded_size[0] - 1;
+    // 'SmartLoaderCreateHeightMap:39' xyInside = xyRounded(insideBounderyInd, :); 
+    // 'SmartLoaderCreateHeightMap:40' zInside = xyz(insideBounderyInd, 3);
+    // 'SmartLoaderCreateHeightMap:42' xyzInsideImg = [xyInside zInside];
+    nb = xyz_size[0] - 1;
     trueCount = 0;
-    for (i = 0; i <= k0; i++) {
-      if (SD->f22.d_tmp_data[i] && SD->f22.e_tmp_data[i]) {
+    for (input_sizes_idx_1 = 0; input_sizes_idx_1 <= nb; input_sizes_idx_1++) {
+      if (SD->f22.d_tmp_data[input_sizes_idx_1] && SD->
+          f22.e_tmp_data[input_sizes_idx_1]) {
         trueCount++;
       }
     }
 
-    nb = 0;
-    for (i = 0; i <= k0; i++) {
-      if (SD->f22.d_tmp_data[i] && SD->f22.e_tmp_data[i]) {
-        SD->f22.imgLinearInd_data[nb] = i + 1;
-        nb++;
+    k0 = 0;
+    for (input_sizes_idx_1 = 0; input_sizes_idx_1 <= nb; input_sizes_idx_1++) {
+      if (SD->f22.d_tmp_data[input_sizes_idx_1] && SD->
+          f22.e_tmp_data[input_sizes_idx_1]) {
+        SD->f22.imgLinearInd_data[k0] = input_sizes_idx_1 + 1;
+        k0++;
       }
     }
 
@@ -2250,46 +2447,48 @@ static void SmartLoaderCreateHeightMap(PerceptionSmartLoaderStackData *SD,
       input_sizes_idx_1 = 0;
     }
 
-    subs[0] = result;
-    subs[1] = input_sizes_idx_1;
-    emxInitMatrix_cell_wrap_3(reshapes);
+    hoistedGlobal_size[0] = result;
+    hoistedGlobal_size[1] = input_sizes_idx_1;
+    emxInitMatrix_cell_wrap_4(reshapes);
     if ((input_sizes_idx_1 == 2) && (result == trueCount)) {
-      for (i33 = 0; i33 < trueCount; i33++) {
-        k0 = (SD->f22.imgLinearInd_data[i33] - 1) << 1;
-        i = i33 << 1;
-        SD->f22.b_xyRounded_data[i] = SD->f22.xyRounded_data[k0];
-        SD->f22.b_xyRounded_data[1 + i] = SD->f22.xyRounded_data[1 + k0];
+      for (i32 = 0; i32 < trueCount; i32++) {
+        k0 = (SD->f22.imgLinearInd_data[i32] - 1) << 1;
+        xyRounded_data_tmp = i32 << 1;
+        SD->f22.b_xyRounded_data[xyRounded_data_tmp] = SD->f22.xyRounded_data[k0];
+        SD->f22.b_xyRounded_data[1 + xyRounded_data_tmp] =
+          SD->f22.xyRounded_data[1 + k0];
       }
 
-      i33 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
+      i32 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
       reshapes[0].f1->size[1] = input_sizes_idx_1;
       reshapes[0].f1->size[0] = result;
-      emxEnsureCapacity_real32_T(reshapes[0].f1, i33);
+      emxEnsureCapacity_real32_T(reshapes[0].f1, i32);
       loop_ub = input_sizes_idx_1 * result;
-      for (i33 = 0; i33 < loop_ub; i33++) {
-        reshapes[0].f1->data[i33] = SD->f22.b_xyRounded_data[i33];
+      for (i32 = 0; i32 < loop_ub; i32++) {
+        reshapes[0].f1->data[i32] = SD->f22.b_xyRounded_data[i32];
       }
     } else {
+      i32 = 0;
       i33 = 0;
-      i34 = 0;
-      i35 = 0;
+      xyRounded_data_tmp = 0;
       k0 = 0;
       nb = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
       reshapes[0].f1->size[1] = input_sizes_idx_1;
       reshapes[0].f1->size[0] = result;
       emxEnsureCapacity_real32_T(reshapes[0].f1, nb);
-      for (nb = 0; nb < subs[0] * subs[1]; nb++) {
-        reshapes[0].f1->data[i34 + reshapes[0].f1->size[1] * i33] =
-          SD->f22.xyRounded_data[k0 + ((SD->f22.imgLinearInd_data[i35] - 1) << 1)];
-        i33++;
-        i35++;
-        if (i33 > reshapes[0].f1->size[0] - 1) {
-          i33 = 0;
-          i34++;
+      for (nb = 0; nb < hoistedGlobal_size[0] * hoistedGlobal_size[1]; nb++) {
+        reshapes[0].f1->data[i33 + reshapes[0].f1->size[1] * i32] =
+          SD->f22.xyRounded_data[k0 + ((SD->
+          f22.imgLinearInd_data[xyRounded_data_tmp] - 1) << 1)];
+        i32++;
+        xyRounded_data_tmp++;
+        if (i32 > reshapes[0].f1->size[0] - 1) {
+          i32 = 0;
+          i33++;
         }
 
-        if (i35 > trueCount - 1) {
-          i35 = 0;
+        if (xyRounded_data_tmp > trueCount - 1) {
+          xyRounded_data_tmp = 0;
           k0++;
         }
       }
@@ -2302,75 +2501,75 @@ static void SmartLoaderCreateHeightMap(PerceptionSmartLoaderStackData *SD,
     }
 
     input_sizes_idx_1 = sizes_idx_1;
+    i32 = 0;
     i33 = 0;
-    i34 = 0;
-    i35 = 0;
+    xyRounded_data_tmp = 0;
     k0 = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
     reshapes[1].f1->size[1] = sizes_idx_1;
     reshapes[1].f1->size[0] = result;
     emxEnsureCapacity_real32_T(reshapes[1].f1, k0);
     for (k0 = 0; k0 < result * input_sizes_idx_1; k0++) {
-      reshapes[1].f1->data[i34 + reshapes[1].f1->size[1] * i33] = xyz_data[2 + 3
-        * (SD->f22.imgLinearInd_data[i35] - 1)];
-      i33++;
-      i35++;
-      if (i33 > reshapes[1].f1->size[0] - 1) {
-        i33 = 0;
-        i34++;
+      reshapes[1].f1->data[i33 + reshapes[1].f1->size[1] * i32] = xyz_data[2 + 3
+        * (SD->f22.imgLinearInd_data[xyRounded_data_tmp] - 1)];
+      i32++;
+      xyRounded_data_tmp++;
+      if (i32 > reshapes[1].f1->size[0] - 1) {
+        i32 = 0;
+        i33++;
       }
     }
 
     emxInit_real32_T(&b_result, 2);
-    i33 = b_result->size[0] * b_result->size[1];
+    i32 = b_result->size[0] * b_result->size[1];
     b_result->size[1] = reshapes[0].f1->size[1] + reshapes[1].f1->size[1];
     b_result->size[0] = reshapes[0].f1->size[0];
-    emxEnsureCapacity_real32_T(b_result, i33);
+    emxEnsureCapacity_real32_T(b_result, i32);
     loop_ub = reshapes[0].f1->size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
+    for (i32 = 0; i32 < loop_ub; i32++) {
       input_sizes_idx_1 = reshapes[0].f1->size[1];
-      for (i34 = 0; i34 < input_sizes_idx_1; i34++) {
-        b_result->data[i34 + b_result->size[1] * i33] = reshapes[0].f1->data[i34
-          + reshapes[0].f1->size[1] * i33];
+      for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
+        b_result->data[i33 + b_result->size[1] * i32] = reshapes[0].f1->data[i33
+          + reshapes[0].f1->size[1] * i32];
       }
     }
 
     loop_ub = reshapes[1].f1->size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
+    for (i32 = 0; i32 < loop_ub; i32++) {
       input_sizes_idx_1 = reshapes[1].f1->size[1];
-      for (i34 = 0; i34 < input_sizes_idx_1; i34++) {
-        b_result->data[(i34 + reshapes[0].f1->size[1]) + b_result->size[1] * i33]
-          = reshapes[1].f1->data[i34 + reshapes[1].f1->size[1] * i33];
+      for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
+        b_result->data[(i33 + reshapes[0].f1->size[1]) + b_result->size[1] * i32]
+          = reshapes[1].f1->data[i33 + reshapes[1].f1->size[1] * i32];
       }
     }
 
     xyzInsideImg_size[1] = reshapes[0].f1->size[1] + reshapes[1].f1->size[1];
     xyzInsideImg_size[0] = reshapes[0].f1->size[0];
     loop_ub = reshapes[0].f1->size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
+    for (i32 = 0; i32 < loop_ub; i32++) {
       input_sizes_idx_1 = reshapes[0].f1->size[1];
-      for (i34 = 0; i34 < input_sizes_idx_1; i34++) {
-        SD->f22.xyzInsideImg_data[i34 + xyzInsideImg_size[1] * i33] = reshapes[0]
-          .f1->data[i34 + reshapes[0].f1->size[1] * i33];
+      for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
+        SD->f22.xyzInsideImg_data[i33 + xyzInsideImg_size[1] * i32] = reshapes[0]
+          .f1->data[i33 + reshapes[0].f1->size[1] * i32];
       }
     }
 
     loop_ub = reshapes[1].f1->size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
+    for (i32 = 0; i32 < loop_ub; i32++) {
       input_sizes_idx_1 = reshapes[1].f1->size[1];
-      for (i34 = 0; i34 < input_sizes_idx_1; i34++) {
-        SD->f22.xyzInsideImg_data[(i34 + reshapes[0].f1->size[1]) +
-          xyzInsideImg_size[1] * i33] = reshapes[1].f1->data[i34 + reshapes[1].
-          f1->size[1] * i33];
+      for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
+        SD->f22.xyzInsideImg_data[(i33 + reshapes[0].f1->size[1]) +
+          xyzInsideImg_size[1] * i32] = reshapes[1].f1->data[i33 + reshapes[1].
+          f1->size[1] * i32];
       }
     }
 
-    emxFreeMatrix_cell_wrap_3(reshapes);
+    emxFreeMatrix_cell_wrap_4(reshapes);
 
-    // 'SmartLoaderCreateHeightMap:35' xyzSorted = sortrows(xyzInsideImg);
-    k0 = b_result->size[1];
+    // 'SmartLoaderCreateHeightMap:43' xyzSorted = sortrows(xyzInsideImg);
+    nb = b_result->size[1];
     col_size[1] = (signed char)xyzInsideImg_size[1];
     col_size[0] = 1;
-    for (input_sizes_idx_1 = 0; input_sizes_idx_1 < k0; input_sizes_idx_1++) {
+    for (input_sizes_idx_1 = 0; input_sizes_idx_1 < nb; input_sizes_idx_1++) {
       col_data[input_sizes_idx_1] = input_sizes_idx_1 + 1;
     }
 
@@ -2379,45 +2578,48 @@ static void SmartLoaderCreateHeightMap(PerceptionSmartLoaderStackData *SD,
     xyzInsideImg_size[1] = b_result->size[1];
     xyzInsideImg_size[0] = b_result->size[0];
     loop_ub = b_result->size[1] * b_result->size[0];
-    for (i33 = 0; i33 < loop_ub; i33++) {
-      SD->f22.xyzInsideImg_data[i33] = b_result->data[i33];
+    for (i32 = 0; i32 < loop_ub; i32++) {
+      SD->f22.xyzInsideImg_data[i32] = b_result->data[i32];
     }
 
     emxFree_real32_T(&b_result);
     apply_row_permutation(SD, SD->f22.xyzInsideImg_data, xyzInsideImg_size,
                           SD->f22.imgLinearInd_data);
 
-    // 'SmartLoaderCreateHeightMap:37' [~,ia,~] = unique(xyzSorted(:,1:2), 'rows', 'last'); 
+    // 'SmartLoaderCreateHeightMap:45' [~,ia,~] = unique(xyzSorted(:,1:2), 'rows', 'last'); 
     if (xyzInsideImg_size[0] == 0) {
       imgLinearInd_size[0] = 0;
     } else {
       loop_ub = xyzInsideImg_size[0];
       xyRounded_size[1] = 2;
       xyRounded_size[0] = xyzInsideImg_size[0];
-      for (i33 = 0; i33 < loop_ub; i33++) {
-        k0 = xyzInsideImg_size[1] * i33;
-        i = i33 << 1;
-        SD->f22.xyRounded_data[i] = SD->f22.xyzInsideImg_data[k0];
-        SD->f22.xyRounded_data[1 + i] = SD->f22.xyzInsideImg_data[1 + k0];
+      for (i32 = 0; i32 < loop_ub; i32++) {
+        k0 = xyzInsideImg_size[1] * i32;
+        xyRounded_data_tmp = i32 << 1;
+        SD->f22.xyRounded_data[xyRounded_data_tmp] = SD->
+          f22.xyzInsideImg_data[k0];
+        SD->f22.xyRounded_data[1 + xyRounded_data_tmp] =
+          SD->f22.xyzInsideImg_data[1 + k0];
       }
 
       sortrows(SD, SD->f22.xyRounded_data, xyRounded_size, SD->f22.idx_data,
                idx_size);
       nb = -1;
-      i33 = xyzInsideImg_size[0];
+      i32 = xyzInsideImg_size[0];
       input_sizes_idx_1 = 1;
-      while (input_sizes_idx_1 <= i33) {
+      while (input_sizes_idx_1 <= i32) {
         k0 = input_sizes_idx_1;
         do {
           input_sizes_idx_1++;
-        } while (!((input_sizes_idx_1 > i33) || rows_differ
+        } while (!((input_sizes_idx_1 > i32) || rows_differ
                    (SD->f22.xyRounded_data, k0, input_sizes_idx_1)));
 
         nb++;
         k0 = (k0 - 1) << 1;
-        i = nb << 1;
-        SD->f22.xyRounded_data[i] = SD->f22.xyRounded_data[k0];
-        SD->f22.xyRounded_data[1 + i] = SD->f22.xyRounded_data[1 + k0];
+        xyRounded_data_tmp = nb << 1;
+        SD->f22.xyRounded_data[xyRounded_data_tmp] = SD->f22.xyRounded_data[k0];
+        SD->f22.xyRounded_data[1 + xyRounded_data_tmp] = SD->f22.xyRounded_data
+          [1 + k0];
         SD->f22.idx_data[nb] = SD->f22.idx_data[input_sizes_idx_1 - 2];
       }
 
@@ -2429,202 +2631,154 @@ static void SmartLoaderCreateHeightMap(PerceptionSmartLoaderStackData *SD,
       }
     }
 
-    // 'SmartLoaderCreateHeightMap:37' ~
-    // 'SmartLoaderCreateHeightMap:37' ~
-    // 'SmartLoaderCreateHeightMap:39' xyzSortedUnique = xyzSorted(ia,:);
+    // 'SmartLoaderCreateHeightMap:45' ~
+    // 'SmartLoaderCreateHeightMap:45' ~
+    // 'SmartLoaderCreateHeightMap:47' xyzSortedUnique = xyzSorted(ia,:);
     loop_ub = xyzInsideImg_size[1];
     input_sizes_idx_1 = imgLinearInd_size[0];
-    for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
-      for (i34 = 0; i34 < loop_ub; i34++) {
-        SD->f22.xyzSortedUnique_data[i34 + loop_ub * i33] =
-          SD->f22.xyzInsideImg_data[i34 + xyzInsideImg_size[1] *
-          (SD->f22.imgLinearInd_data[i33] - 1)];
+    for (i32 = 0; i32 < input_sizes_idx_1; i32++) {
+      for (i33 = 0; i33 < loop_ub; i33++) {
+        SD->f22.xyzSortedUnique_data[i33 + loop_ub * i32] =
+          SD->f22.xyzInsideImg_data[i33 + xyzInsideImg_size[1] *
+          (SD->f22.imgLinearInd_data[i32] - 1)];
       }
     }
 
-    // 'SmartLoaderCreateHeightMap:40' zSortedUnique = xyzSortedUnique(:,3);
+    // 'SmartLoaderCreateHeightMap:48' zSortedUnique = xyzSortedUnique(:,3);
     input_sizes_idx_1 = imgLinearInd_size[0];
-    for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
-      SD->f22.b_tmp_data[i33] = SD->f22.xyzSortedUnique_data[2 + loop_ub * i33];
+    for (i32 = 0; i32 < input_sizes_idx_1; i32++) {
+      SD->f22.b_tmp_data[i32] = SD->f22.xyzSortedUnique_data[2 + loop_ub * i32];
     }
 
-    // 'SmartLoaderCreateHeightMap:42' imgLinearInd = sub2ind(size(heightMap_res), xyzSortedUnique(:,2), xyzSortedUnique(:,1)); 
+    // 'SmartLoaderCreateHeightMap:50' imgLinearInd = sub2ind(size(heightMap_res), xyzSortedUnique(:,2), xyzSortedUnique(:,1)); 
     input_sizes_idx_1 = imgLinearInd_size[0];
-    for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
-      k0 = xyzInsideImg_size[1] * i33;
-      SD->f22.imgLinearInd_data[i33] = (int)SD->f22.xyzSortedUnique_data[1 + k0]
-        + (short)heightMap_res_size[0] * ((int)SD->f22.xyzSortedUnique_data[k0]
+    for (i32 = 0; i32 < input_sizes_idx_1; i32++) {
+      nb = xyzInsideImg_size[1] * i32;
+      SD->f22.imgLinearInd_data[i32] = (int)SD->f22.xyzSortedUnique_data[1 + nb]
+        + (short)heightMap_res_size[0] * ((int)SD->f22.xyzSortedUnique_data[nb]
         - 1);
     }
 
-    // 'SmartLoaderCreateHeightMap:44' heightMap_res(imgLinearInd) = zSortedUnique; 
+    // 'SmartLoaderCreateHeightMap:52' heightMap_res(imgLinearInd) = zSortedUnique; 
     input_sizes_idx_1 = imgLinearInd_size[0];
-    for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
-      SD->f22.c_tmp_data[i33] = SD->f22.imgLinearInd_data[i33] - 1;
+    for (i32 = 0; i32 < input_sizes_idx_1; i32++) {
+      SD->f22.c_tmp_data[i32] = SD->f22.imgLinearInd_data[i32] - 1;
     }
 
-    i33 = heightMap_res_size[0];
+    i32 = heightMap_res_size[0];
     input_sizes_idx_1 = imgLinearInd_size[0] - 1;
-    for (i34 = 0; i34 <= input_sizes_idx_1; i34++) {
-      heightMap_res_data[SD->f22.c_tmp_data[i34] % i33 * heightMap_res_size[1] +
-        SD->f22.c_tmp_data[i34] / i33] = SD->f22.b_tmp_data[i34];
+    for (i33 = 0; i33 <= input_sizes_idx_1; i33++) {
+      heightMap_res_data[SD->f22.c_tmp_data[i33] % i32 * heightMap_res_size[1] +
+        SD->f22.c_tmp_data[i33] / i32] = SD->f22.b_tmp_data[i33];
     }
 
     // f1 = figure, PointCloudClassificationPlottingUtility.PlotMaxMap(heightMap_res); 
     //  The easiest thing to do - is apply knn search on the data
-    // 'SmartLoaderCreateHeightMap:50' if isempty(allImgInds)
-    if (!SD->pd->allImgInds_not_empty) {
-      // 'SmartLoaderCreateHeightMap:51' [rowInd, colInd] = ind2sub(size(heightMap_res), 1:numel(heightMap_res)); 
-      k0 = heightMap_res_size[0] * heightMap_res_size[1];
-      if (k0 < 1) {
-        k0 = 0;
-      } else {
-        for (i33 = 0; i33 < k0; i33++) {
-          SD->f22.y_data[i33] = 1 + i33;
-        }
-      }
-
-      siz_idx_0 = heightMap_res_size[0];
-      for (i33 = 0; i33 < k0; i33++) {
-        SD->f22.v1_data[i33] = SD->f22.y_data[i33] - 1;
-      }
-
-      for (i33 = 0; i33 < k0; i33++) {
-        SD->f22.vk_data[i33] = div_s32(SD->f22.v1_data[i33], (int)(short)
-          siz_idx_0);
-      }
-
-      input_sizes_idx_1 = k0 - 1;
-      for (i33 = 0; i33 <= input_sizes_idx_1; i33++) {
-        SD->f22.v1_data[i33] -= SD->f22.vk_data[i33] * (short)siz_idx_0;
-      }
-
-      for (i33 = 0; i33 < k0; i33++) {
-        SD->f22.y_data[i33] = SD->f22.v1_data[i33] + 1;
-      }
-
-      for (i33 = 0; i33 < k0; i33++) {
-        SD->f22.colInd_data[i33] = SD->f22.vk_data[i33] + 1;
-      }
-
-      // 'SmartLoaderCreateHeightMap:52' allImgInds = [colInd', rowInd'];
-      i33 = SD->pd->allImgInds->size[0] * SD->pd->allImgInds->size[1];
-      SD->pd->allImgInds->size[1] = 2;
-      SD->pd->allImgInds->size[0] = k0;
-      emxEnsureCapacity_real_T(SD->pd->allImgInds, i33);
-      for (i33 = 0; i33 < k0; i33++) {
-        SD->pd->allImgInds->data[i33 << 1] = SD->f22.colInd_data[i33];
-      }
-
-      for (i33 = 0; i33 < k0; i33++) {
-        SD->pd->allImgInds->data[1 + (i33 << 1)] = SD->f22.y_data[i33];
-      }
-
-      SD->pd->allImgInds_not_empty = (SD->pd->allImgInds->size[0] != 0);
+    // 'SmartLoaderCreateHeightMap:57' missingPixelsLogical = ones(numel(heightMap_res),1,'logical'); 
+    nb = heightMap_res_size[0] * heightMap_res_size[1];
+    for (i32 = 0; i32 < nb; i32++) {
+      SD->f22.missingPixelsLogical_data[i32] = true;
     }
 
-    // 'SmartLoaderCreateHeightMap:55' missingPixelsLogical = ones(numel(heightMap_res),1,'logical'); 
-    input_sizes_idx_1 = heightMap_res_size[0] * heightMap_res_size[1];
-    for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
-      SD->f22.missingPixelsLogical_data[i33] = true;
-    }
-
-    // 'SmartLoaderCreateHeightMap:56' missingPixelsLogical(imgLinearInd) = false; 
+    // 'SmartLoaderCreateHeightMap:58' missingPixelsLogical(imgLinearInd) = false; 
     input_sizes_idx_1 = imgLinearInd_size[0];
-    for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
-      SD->f22.missingPixelsLogical_data[SD->f22.imgLinearInd_data[i33] - 1] =
+    for (i32 = 0; i32 < input_sizes_idx_1; i32++) {
+      SD->f22.missingPixelsLogical_data[SD->f22.imgLinearInd_data[i32] - 1] =
         false;
     }
 
-    // 'SmartLoaderCreateHeightMap:57' missingPixels = allImgInds(missingPixelsLogical,:); 
-    k0 = heightMap_res_size[0] * heightMap_res_size[1] - 1;
+    // 'SmartLoaderCreateHeightMap:59' missingPixels = allImgInds(missingPixelsLogical,:); 
+    nb--;
     trueCount = 0;
-    for (i = 0; i <= k0; i++) {
-      if (SD->f22.missingPixelsLogical_data[i]) {
+    for (input_sizes_idx_1 = 0; input_sizes_idx_1 <= nb; input_sizes_idx_1++) {
+      if (SD->f22.missingPixelsLogical_data[input_sizes_idx_1]) {
         trueCount++;
       }
     }
 
-    nb = 0;
-    for (i = 0; i <= k0; i++) {
-      if (SD->f22.missingPixelsLogical_data[i]) {
-        SD->f22.tmp_data[nb] = i + 1;
-        nb++;
+    k0 = 0;
+    for (input_sizes_idx_1 = 0; input_sizes_idx_1 <= nb; input_sizes_idx_1++) {
+      if (SD->f22.missingPixelsLogical_data[input_sizes_idx_1]) {
+        SD->f22.tmp_data[k0] = input_sizes_idx_1 + 1;
+        k0++;
       }
     }
 
     emxInit_real_T(&missingPixels, 2);
-    i33 = missingPixels->size[0] * missingPixels->size[1];
+    i32 = missingPixels->size[0] * missingPixels->size[1];
     missingPixels->size[1] = 2;
     missingPixels->size[0] = trueCount;
-    emxEnsureCapacity_real_T(missingPixels, i33);
-    for (i33 = 0; i33 < trueCount; i33++) {
-      i34 = (SD->f22.tmp_data[i33] - 1) << 1;
-      i35 = i33 << 1;
-      missingPixels->data[i35] = SD->pd->allImgInds->data[i34];
-      missingPixels->data[1 + i35] = SD->pd->allImgInds->data[1 + i34];
+    emxEnsureCapacity_real_T(missingPixels, i32);
+    for (i32 = 0; i32 < trueCount; i32++) {
+      i33 = (SD->f22.tmp_data[i32] - 1) << 1;
+      xyRounded_data_tmp = i32 << 1;
+      missingPixels->data[xyRounded_data_tmp] = SD->pd->allImgInds->data[i33];
+      missingPixels->data[1 + xyRounded_data_tmp] = SD->pd->allImgInds->data[1 +
+        i33];
     }
 
-    // 'SmartLoaderCreateHeightMap:59' Idx = knnsearch(xyzSortedUnique(:,1:2), missingPixels); 
+    // 'SmartLoaderCreateHeightMap:61' Idx = knnsearch(xyzSortedUnique(:,1:2), missingPixels); 
     input_sizes_idx_1 = imgLinearInd_size[0];
     xyzSortedUnique_size[1] = 2;
     xyzSortedUnique_size[0] = imgLinearInd_size[0];
-    for (i33 = 0; i33 < input_sizes_idx_1; i33++) {
-      k0 = loop_ub * i33;
-      nb = i33 << 1;
-      SD->f22.xyRounded_data[nb] = SD->f22.xyzSortedUnique_data[k0];
-      SD->f22.xyRounded_data[1 + nb] = SD->f22.xyzSortedUnique_data[1 + k0];
+    for (i32 = 0; i32 < input_sizes_idx_1; i32++) {
+      nb = loop_ub * i32;
+      k0 = i32 << 1;
+      SD->f22.xyRounded_data[k0] = SD->f22.xyzSortedUnique_data[nb];
+      SD->f22.xyRounded_data[1 + k0] = SD->f22.xyzSortedUnique_data[1 + nb];
     }
 
     emxInit_real_T(&Idx, 2);
     knnsearch(SD, SD->f22.xyRounded_data, xyzSortedUnique_size, missingPixels,
               Idx);
 
-    // 'SmartLoaderCreateHeightMap:60' for i = 1:size(missingPixels,1)
-    i33 = missingPixels->size[0];
-    b5 = true;
-    b6 = ((Idx->size[1] <= 0) || (Idx->size[0] <= 0));
-    i34 = Idx->size[1] * Idx->size[0];
-    i35 = 0;
-    for (i = 0; i < i33; i++) {
-      if (b6 || (i >= i34)) {
-        i35 = 0;
-        b5 = true;
-      } else if (b5) {
-        b5 = false;
-        i35 = Idx->size[1];
+    // 'SmartLoaderCreateHeightMap:62' for i = 1:size(missingPixels,1)
+    i32 = missingPixels->size[0];
+    b6 = true;
+    b7 = ((Idx->size[1] <= 0) || (Idx->size[0] <= 0));
+    i33 = Idx->size[1] * Idx->size[0];
+    xyRounded_data_tmp = 0;
+    for (input_sizes_idx_1 = 0; input_sizes_idx_1 < i32; input_sizes_idx_1++) {
+      if (b7 || (input_sizes_idx_1 >= i33)) {
+        xyRounded_data_tmp = 0;
+        b6 = true;
+      } else if (b6) {
+        b6 = false;
+        xyRounded_data_tmp = Idx->size[1];
         k0 = Idx->size[0];
-        i35 = i % k0 * i35 + i / k0;
+        xyRounded_data_tmp = input_sizes_idx_1 % k0 * xyRounded_data_tmp +
+          input_sizes_idx_1 / k0;
       } else {
         k0 = Idx->size[1];
         nb = k0 * Idx->size[0] - 1;
-        if (i35 > MAX_int32_T - k0) {
-          i35 = Idx->size[1];
+        if (xyRounded_data_tmp > MAX_int32_T - k0) {
+          xyRounded_data_tmp = Idx->size[1];
           k0 = Idx->size[0];
-          i35 = i % k0 * i35 + i / k0;
+          xyRounded_data_tmp = input_sizes_idx_1 % k0 * xyRounded_data_tmp +
+            input_sizes_idx_1 / k0;
         } else {
-          i35 += k0;
-          if (i35 > nb) {
-            i35 -= nb;
+          xyRounded_data_tmp += k0;
+          if (xyRounded_data_tmp > nb) {
+            xyRounded_data_tmp -= nb;
           }
         }
       }
 
-      // 'SmartLoaderCreateHeightMap:61' heightMap_res(missingPixels(i,2), missingPixels(i,1)) = zSortedUnique(Idx(i)); 
-      k0 = i << 1;
-      heightMap_res_data[((int)missingPixels->data[k0] + heightMap_res_size[1] *
-                          ((int)missingPixels->data[1 + k0] - 1)) - 1] =
-        SD->f22.b_tmp_data[(int)Idx->data[i35] - 1];
+      // 'SmartLoaderCreateHeightMap:63' heightMap_res(missingPixels(i,2), missingPixels(i,1)) = zSortedUnique(Idx(i)); 
+      nb = input_sizes_idx_1 << 1;
+      heightMap_res_data[((int)missingPixels->data[nb] + heightMap_res_size[1] *
+                          ((int)missingPixels->data[1 + nb] - 1)) - 1] =
+        SD->f22.b_tmp_data[(int)Idx->data[xyRounded_data_tmp] - 1];
     }
 
     emxFree_real_T(&Idx);
     emxFree_real_T(&missingPixels);
 
-    // 'SmartLoaderCreateHeightMap:64' if false
-    // 'SmartLoaderCreateHeightMap:70' smartLoaderStruct.heightMapStatus = true; 
+    // 'SmartLoaderCreateHeightMap:66' if false
+    // 'SmartLoaderCreateHeightMap:72' smartLoaderStruct.heightMapStatus = true; 
     smartLoaderStruct->heightMapStatus = true;
 
-    // 'SmartLoaderCreateHeightMap:72' if false && coder.target('Matlab')
+    // 'SmartLoaderCreateHeightMap:74' if false && coder.target('Matlab')
   }
 }
 
@@ -2646,7 +2800,6 @@ static void SmartLoaderCreateHeightMap_init(PerceptionSmartLoaderStackData *SD)
 {
   emxInit_real_T(&SD->pd->allImgInds, 2);
   emxInit_real32_T(&SD->pd->heightMap_resPersistent, 2);
-  SD->pd->allImgInds_not_empty = false;
   SD->pd->heightMap_resPersistent_not_empty = false;
 }
 
@@ -2668,73 +2821,74 @@ static void SmartLoaderEstiamteLocations(PerceptionSmartLoaderStackData *SD,
   ptCloudSenceIntensity_data[], const int ptCloudSenceIntensity_size[1])
 {
   int loop_ub;
-  int i50;
+  int i46;
   int m;
   int trueCount;
   int partialTrueCount;
   int ptCloudSenceReflectorsXyz_size[2];
   double singleReflectorRangeLimitMeter;
+  float r[2];
   float distanceToKmeansClusterMeter[2];
-  float cxyEst[2];
   float pcFirstDistanceToPlane;
-  boolean_T b_distanceToKmeansClusterMeter[2];
+  double v_idx_0;
+  boolean_T b_r[2];
+  emxArray_real32_T *pdistOutput;
+  emxArray_real32_T *Z;
+  emxArray_cell_wrap_4_64x1 clustersXs;
+  emxArray_cell_wrap_4_64x1 clustersYs;
+  emxArray_cell_wrap_4_64x1 r2;
+  cell_wrap_4 reshapes[2];
+  emxArray_real32_T *varargin_1;
+  cell_wrap_4 b_reshapes[2];
+  cell_wrap_4 c_reshapes[2];
+  emxArray_real32_T *d_reshapes;
+  boolean_T guard1 = false;
   int kmeansIdx_size[1];
   float kmeansC[6];
   int input_sizes[2];
-  int iv2[1];
-  float pcSecondDistanceToPlane;
+  float b_kmeansC[3];
+  int iv1[1];
+  float pcFirstRange_idx_0;
   int b_ptCloudSenceReflectorsXyz_size[2];
   int tmp_size[1];
-  int pcFirstXyz_size[2];
   int x_size[1];
-  float pcFirstRange_idx_0;
+  int pcFirstXyz_size[2];
   float pcFirstRange_idx_1;
-  float minval[3];
   int c_ptCloudSenceReflectorsXyz_size[2];
   int d_ptCloudSenceReflectorsXyz_size[2];
-  emxArray_cell_wrap_3_64x1 clustersXs;
-  emxArray_cell_wrap_3_64x1 clustersYs;
+  boolean_T empty_non_axis_sizes;
   float pcSecondRange_idx_0;
   float pcSecondRange_idx_1;
-  emxArray_cell_wrap_3_64x1 r2;
   boolean_T isInvalid_data[64];
   int extremePoints_size[2];
-  int ptCloudShovelReflectorsXyz_size[2];
-  emxArray_real32_T *pdistOutput;
-  emxArray_real32_T *Z;
-  cell_wrap_3 reshapes[2];
-  emxArray_real32_T *varargin_1;
-  cell_wrap_3 b_reshapes[2];
-  cell_wrap_3 c_reshapes[2];
-  boolean_T isFoundLoaderPc;
-  emxArray_real32_T *d_reshapes;
   int q;
-  boolean_T guard1 = false;
-  boolean_T empty_non_axis_sizes;
-  unsigned long u0;
-  unsigned long u1;
-  unsigned long u2;
-  int i51;
-  double v_idx_0;
-  int i52;
-  float b_kmeansC[6];
-  double v_idx_1;
+  int ptCloudShovelReflectorsXyz_size[2];
   float extremePoints_data[128];
-  int i53;
-  double d5;
-  float b_pcSecondRange_idx_0;
+  boolean_T isFoundLoaderPc;
   float us_data[64];
-  float c_pcSecondRange_idx_0;
-  signed char b_input_sizes;
-  float b_pcFirstRange_idx_0;
+  int i47;
+  int i48;
+  int i49;
   float vs_data[64];
   int temp_usus_size[1];
-  float c_pcFirstRange_idx_0;
+  boolean_T guard2 = false;
+  unsigned long u0;
+  unsigned long u1;
   float temp_usus_data[64];
+  signed char b_input_sizes;
+  unsigned long u2;
   int temp_vsvs_size[1];
+  float c_kmeansC[6];
+  double v_idx_1;
+  double d5;
   float temp_vsvs_data[64];
+  float b_pcSecondRange_idx_0;
+  float pcSecondDistanceToPlane;
   int temp_vsus_size[1];
+  float c_pcSecondRange_idx_0;
+  float b_pcFirstRange_idx_0;
   float temp_vsus_data[64];
+  float c_pcFirstRange_idx_0;
   float fv0[4];
   float fv1[4];
   int b_temp_usus_size[1];
@@ -2745,11 +2899,11 @@ static void SmartLoaderEstiamteLocations(PerceptionSmartLoaderStackData *SD,
   int c_temp_vsus_size[1];
   float b_vs_data[64];
   int vk;
+  int modelErr1_size[2];
   int tempXs_size;
+  float modelErr1_data[128];
   float tempXs_data[2];
   signed char sizes;
-  int modelErr1_size[2];
-  float modelErr1_data[128];
   int us_size[1];
   int b_us_size[1];
   int extremePoints_size_idx_1;
@@ -2780,9 +2934,9 @@ static void SmartLoaderEstiamteLocations(PerceptionSmartLoaderStackData *SD,
   //  Estimate loader by circled reflector
   // 'SmartLoaderEstiamteLocations:6' ptCloudSenceReflectorsInd = ptCloudSenceIntensity > configParams.minimumIntensityReflectorValue; 
   loop_ub = ptCloudSenceIntensity_size[0];
-  for (i50 = 0; i50 < loop_ub; i50++) {
-    SD->u6.f20.ptCloudSenceReflectorsInd_data[i50] =
-      (ptCloudSenceIntensity_data[i50] >
+  for (i46 = 0; i46 < loop_ub; i46++) {
+    SD->u6.f20.ptCloudSenceReflectorsInd_data[i46] =
+      (ptCloudSenceIntensity_data[i46] >
        configParams->minimumIntensityReflectorValue);
   }
 
@@ -2805,17 +2959,17 @@ static void SmartLoaderEstiamteLocations(PerceptionSmartLoaderStackData *SD,
 
   ptCloudSenceReflectorsXyz_size[1] = 3;
   ptCloudSenceReflectorsXyz_size[0] = trueCount;
-  for (i50 = 0; i50 < trueCount; i50++) {
-    m = 3 * (SD->u6.f20.iidx_data[i50] - 1);
-    SD->u6.f20.ptCloudSenceReflectorsXyz_data[3 * i50] = ptCloudSenceXyz_data[m];
-    SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + 3 * i50] =
+  for (i46 = 0; i46 < trueCount; i46++) {
+    m = 3 * (SD->u6.f20.iidx_data[i46] - 1);
+    SD->u6.f20.ptCloudSenceReflectorsXyz_data[3 * i46] = ptCloudSenceXyz_data[m];
+    SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + 3 * i46] =
       ptCloudSenceXyz_data[1 + m];
-    SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + 3 * i50] =
+    SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + 3 * i46] =
       ptCloudSenceXyz_data[2 + m];
   }
 
   // 'SmartLoaderEstiamteLocations:8' ptCloudSenceReflectorsIntensity = ptCloudSenceIntensity(ptCloudSenceReflectorsInd,:); 
-  //  figure, PlotPointCloud(ptCloudSenceReflectors);
+  //  figure, PlotPointCloud(ptCloudSenceReflectorsXyz);
   //  figure, PlotPointCloud([ptCloudSenceReflectorsXyz ptCloudSenceReflectorsIntensity]); 
   // 'SmartLoaderEstiamteLocations:12' if size(ptCloudSenceReflectorsXyz,1) < configParams.minPointsForReflector 
   if (trueCount < configParams->minPointsForReflector) {
@@ -2835,1784 +2989,1843 @@ static void SmartLoaderEstiamteLocations(PerceptionSmartLoaderStackData *SD,
     // 'SmartLoaderEstiamteLocations:26' r = RangeCompiledVersion(ptCloudSenceReflectorsXyz(:,1:2)); 
     // 'RangeCompiledVersion:4' coder.inline('always');
     // 'RangeCompiledVersion:7' output = max(input) - min(input);
+    r[0] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[0];
+    r[1] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[1];
+    for (loop_ub = 2; loop_ub <= trueCount; loop_ub++) {
+      i46 = 3 * (loop_ub - 1);
+      if (r[0] < SD->u6.f20.ptCloudSenceReflectorsXyz_data[i46]) {
+        r[0] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[i46];
+      }
+
+      pcFirstDistanceToPlane = SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + i46];
+      if (r[1] < pcFirstDistanceToPlane) {
+        r[1] = pcFirstDistanceToPlane;
+      }
+    }
+
     distanceToKmeansClusterMeter[0] = SD->u6.f20.ptCloudSenceReflectorsXyz_data
       [0];
     distanceToKmeansClusterMeter[1] = SD->u6.f20.ptCloudSenceReflectorsXyz_data
       [1];
     for (loop_ub = 2; loop_ub <= trueCount; loop_ub++) {
-      i50 = 3 * (loop_ub - 1);
-      if (distanceToKmeansClusterMeter[0] <
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[i50]) {
+      i46 = 3 * (loop_ub - 1);
+      if (distanceToKmeansClusterMeter[0] >
+          SD->u6.f20.ptCloudSenceReflectorsXyz_data[i46]) {
         distanceToKmeansClusterMeter[0] =
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[i50];
+          SD->u6.f20.ptCloudSenceReflectorsXyz_data[i46];
       }
 
-      pcFirstDistanceToPlane = SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + i50];
-      if (distanceToKmeansClusterMeter[1] < pcFirstDistanceToPlane) {
+      pcFirstDistanceToPlane = SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + i46];
+      if (distanceToKmeansClusterMeter[1] > pcFirstDistanceToPlane) {
         distanceToKmeansClusterMeter[1] = pcFirstDistanceToPlane;
       }
     }
 
-    cxyEst[0] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[0];
-    cxyEst[1] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[1];
-    for (loop_ub = 2; loop_ub <= trueCount; loop_ub++) {
-      i50 = 3 * (loop_ub - 1);
-      if (cxyEst[0] > SD->u6.f20.ptCloudSenceReflectorsXyz_data[i50]) {
-        cxyEst[0] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[i50];
-      }
+    // 'SmartLoaderEstiamteLocations:28' if any(r > (configParams.loaderHeightMeter + configParams.locationsBiasMeter * 10)) 
+    v_idx_0 = configParams->loaderHeightMeter + configParams->locationsBiasMeter
+      * 10.0;
+    pcFirstDistanceToPlane = r[0] - distanceToKmeansClusterMeter[0];
+    b_r[0] = (pcFirstDistanceToPlane > v_idx_0);
+    r[0] = pcFirstDistanceToPlane;
+    pcFirstDistanceToPlane = r[1] - distanceToKmeansClusterMeter[1];
+    b_r[1] = (pcFirstDistanceToPlane > v_idx_0);
+    if (any(b_r)) {
+      //  Reflector size is too long then I expected
+      // 'SmartLoaderEstiamteLocations:30' if coder.target('Matlab')
+      // 'SmartLoaderEstiamteLocations:33' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailed; 
+      smartLoaderStruct->status = PerceptionSmartLoaderReturnValue_eFailed;
+    } else {
+      // 'SmartLoaderEstiamteLocations:37' if all(r < singleReflectorRangeLimitMeter) 
+      b_r[0] = (r[0] < singleReflectorRangeLimitMeter);
+      b_r[1] = (pcFirstDistanceToPlane < singleReflectorRangeLimitMeter);
+      emxInit_real32_T(&pdistOutput, 2);
+      emxInit_real32_T(&Z, 2);
+      emxInit_cell_wrap_4_64x1(&clustersXs);
+      emxInit_cell_wrap_4_64x1(&clustersYs);
+      emxInit_cell_wrap_4_64x1(&r2);
+      emxInitMatrix_cell_wrap_4(reshapes);
+      emxInit_real32_T(&varargin_1, 1);
+      emxInitMatrix_cell_wrap_4(b_reshapes);
+      emxInitMatrix_cell_wrap_4(c_reshapes);
+      emxInit_real32_T(&d_reshapes, 2);
+      guard1 = false;
+      if (all(b_r)) {
+        //     %%
+        //  We assume the reflectors hold only the loader!
+        // 'SmartLoaderEstiamteLocations:40' if coder.target('Matlab')
+        //  TODO - handle the reflectors here !!!
+        // ptCloudLoaderReflectors = ptCloudSenceReflectors;
+        // 'SmartLoaderEstiamteLocations:45' ptCloudLoaderReflectorsXyz = ptCloudSenceReflectorsXyz; 
+        // 'SmartLoaderEstiamteLocations:46' ptCloudLoaderReflectorsIntensity = ptCloudSenceReflectorsIntensity; 
+        //  figure, PlotPointCloud(ptCloudSenceReflectors);
+        //  figure, PlotPointCloud(ptCloudLoaderReflectors);
+        guard1 = true;
+      } else {
+        // 'SmartLoaderEstiamteLocations:50' else
+        //  Found both shovel and loader reflectors
+        // 'SmartLoaderEstiamteLocations:52' [kmeansIdx,kmeansC,kmeanssumd,kmeansDistanceMat] = kmeans(ptCloudSenceReflectorsXyz, 2, 'Replicates', 5); 
+        kmeans(SD, SD->u6.f20.ptCloudSenceReflectorsXyz_data,
+               ptCloudSenceReflectorsXyz_size, SD->u6.f20.kmeansIdx_data,
+               kmeansIdx_size, kmeansC, distanceToKmeansClusterMeter,
+               SD->u6.f20.kmeansDistanceMat_data, input_sizes);
 
-      pcFirstDistanceToPlane = SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + i50];
-      if (cxyEst[1] > pcFirstDistanceToPlane) {
-        cxyEst[1] = pcFirstDistanceToPlane;
-      }
-    }
+        // 'SmartLoaderEstiamteLocations:53' [~, minInd] = min(kmeansDistanceMat,[],1); 
+        // 'SmartLoaderEstiamteLocations:53' ~
+        // 'SmartLoaderEstiamteLocations:55' if (norm(kmeansC(1,:) - kmeansC(2,:))) > (configParams.loaderHeightMeter + configParams.locationsBiasMeter * 10) 
+        b_kmeansC[0] = kmeansC[0] - kmeansC[3];
+        b_kmeansC[1] = kmeansC[1] - kmeansC[4];
+        b_kmeansC[2] = kmeansC[2] - kmeansC[5];
+        if (b_norm(b_kmeansC) > v_idx_0) {
+          //  Reflector size is too long then I expected
+          // 'SmartLoaderEstiamteLocations:57' if coder.target('Matlab')
+          // 'SmartLoaderEstiamteLocations:60' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailed; 
+          smartLoaderStruct->status = PerceptionSmartLoaderReturnValue_eFailed;
+        } else {
+          // 'SmartLoaderEstiamteLocations:65' if coder.target('Matlab') && false 
+          //  Get the first and the second point cloud
+          //  Clean the first and the second point cloud with everything larger or smaller than this threashold configParams.reflectorMaxZaxisDistanceForOutlierMeter 
+          // pcFirstOrg = select(ptCloudSenceReflectors, find(kmeansIdx == 1));
+          // 'SmartLoaderEstiamteLocations:82' pcFirstOrgXyz = ptCloudSenceReflectorsXyz(kmeansIdx == 1,:); 
+          //  figure, PlotPointCloud(pcFirst);
+          // 'SmartLoaderEstiamteLocations:85' [pcFirstXyz] = FilterPointCloudAccordingToZdifferences(pcFirstOrgXyz, configParams.reflectorMaxZaxisDistanceForOutlierMeter); 
+          m = kmeansIdx_size[0] - 1;
+          trueCount = 0;
+          for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+            if (SD->u6.f20.kmeansIdx_data[loop_ub] == 1.0) {
+              trueCount++;
+            }
+          }
 
-    // 'SmartLoaderEstiamteLocations:27' if all(r < singleReflectorRangeLimitMeter) 
-    b_distanceToKmeansClusterMeter[0] = (distanceToKmeansClusterMeter[0] -
-      cxyEst[0] < singleReflectorRangeLimitMeter);
-    b_distanceToKmeansClusterMeter[1] = (distanceToKmeansClusterMeter[1] -
-      cxyEst[1] < singleReflectorRangeLimitMeter);
-    if (!all(b_distanceToKmeansClusterMeter)) {
-      // 'SmartLoaderEstiamteLocations:40' else
-      //  Found both shovel and loader reflectors
-      // 'SmartLoaderEstiamteLocations:42' [kmeansIdx,kmeansC,kmeanssumd,kmeansDistanceMat] = kmeans(ptCloudSenceReflectorsXyz, 2, 'Replicates', 5); 
-      kmeans(SD, SD->u6.f20.ptCloudSenceReflectorsXyz_data,
-             ptCloudSenceReflectorsXyz_size, SD->u6.f20.kmeansIdx_data,
-             kmeansIdx_size, kmeansC, distanceToKmeansClusterMeter,
-             SD->u6.f20.kmeansDistanceMat_data, input_sizes);
+          partialTrueCount = 0;
+          for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+            if (SD->u6.f20.kmeansIdx_data[loop_ub] == 1.0) {
+              SD->u6.f20.b_tmp_data[partialTrueCount] = loop_ub + 1;
+              partialTrueCount++;
+            }
+          }
 
-      // 'SmartLoaderEstiamteLocations:43' [~, minInd] = min(kmeansDistanceMat,[],1); 
-      // 'SmartLoaderEstiamteLocations:43' ~
-      // 'SmartLoaderEstiamteLocations:45' if coder.target('Matlab') && false
-      //  Get the first and the second point cloud
-      //  Clean the first and the second point cloud with everything larger or smaller than this threashold configParams.reflectorMaxZaxisDistanceForOutlierMeter 
-      // pcFirstOrg = select(ptCloudSenceReflectors, find(kmeansIdx == 1));
-      // 'SmartLoaderEstiamteLocations:62' pcFirstOrgXyz = ptCloudSenceReflectorsXyz(kmeansIdx == 1,:); 
-      //  figure, PlotPointCloud(pcFirst);
-      // 'SmartLoaderEstiamteLocations:65' [pcFirstXyz] = FilterPointCloudAccordingToZdifferences(pcFirstOrgXyz, configParams.reflectorMaxZaxisDistanceForOutlierMeter); 
-      m = kmeansIdx_size[0] - 1;
-      trueCount = 0;
-      for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-        if (SD->u6.f20.kmeansIdx_data[loop_ub] == 1.0) {
-          trueCount++;
-        }
-      }
+          b_ptCloudSenceReflectorsXyz_size[1] = 3;
+          b_ptCloudSenceReflectorsXyz_size[0] = trueCount;
+          for (i46 = 0; i46 < trueCount; i46++) {
+            m = 3 * (SD->u6.f20.b_tmp_data[i46] - 1);
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[3 * i46] =
+              SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[1 + 3 * i46] =
+              SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[2 + 3 * i46] =
+              SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
+          }
 
-      partialTrueCount = 0;
-      for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-        if (SD->u6.f20.kmeansIdx_data[loop_ub] == 1.0) {
-          SD->u6.f20.b_tmp_data[partialTrueCount] = loop_ub + 1;
-          partialTrueCount++;
-        }
-      }
+          FilterPointCloudAccordingToZdifferences(SD,
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data,
+            b_ptCloudSenceReflectorsXyz_size,
+            configParams->reflectorMaxZaxisDistanceForOutlierMeter,
+            SD->u6.f20.pcFirstXyz_data, pcFirstXyz_size);
 
-      b_ptCloudSenceReflectorsXyz_size[1] = 3;
-      b_ptCloudSenceReflectorsXyz_size[0] = trueCount;
-      for (i50 = 0; i50 < trueCount; i50++) {
-        m = 3 * (SD->u6.f20.b_tmp_data[i50] - 1);
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[3 * i50] =
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[1 + 3 * i50] =
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[2 + 3 * i50] =
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
-      }
+          //  figure, PlotPointCloud(pcFirstXyz);
+          // pcFirstRange = RangeCompiledVersion(pcFirst.Location);
+          // 'SmartLoaderEstiamteLocations:89' pcFirstRange = RangeCompiledVersion(pcFirstXyz); 
+          // 'RangeCompiledVersion:4' coder.inline('always');
+          // 'RangeCompiledVersion:7' output = max(input) - min(input);
+          m = pcFirstXyz_size[0];
+          pcFirstRange_idx_0 = SD->u6.f20.pcFirstXyz_data[0];
+          pcFirstRange_idx_1 = SD->u6.f20.pcFirstXyz_data[1];
+          for (loop_ub = 2; loop_ub <= m; loop_ub++) {
+            i46 = 3 * (loop_ub - 1);
+            if (pcFirstRange_idx_0 < SD->u6.f20.pcFirstXyz_data[i46]) {
+              pcFirstRange_idx_0 = SD->u6.f20.pcFirstXyz_data[i46];
+            }
 
-      FilterPointCloudAccordingToZdifferences(SD,
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data,
-        b_ptCloudSenceReflectorsXyz_size,
-        configParams->reflectorMaxZaxisDistanceForOutlierMeter,
-        SD->u6.f20.pcFirstXyz_data, pcFirstXyz_size);
+            pcFirstDistanceToPlane = SD->u6.f20.pcFirstXyz_data[1 + i46];
+            if (pcFirstRange_idx_1 < pcFirstDistanceToPlane) {
+              pcFirstRange_idx_1 = pcFirstDistanceToPlane;
+            }
+          }
 
-      //  figure, PlotPointCloud(pcFirst);
-      // pcFirstRange = RangeCompiledVersion(pcFirst.Location);
-      // 'SmartLoaderEstiamteLocations:69' pcFirstRange = RangeCompiledVersion(pcFirstXyz); 
-      // 'RangeCompiledVersion:4' coder.inline('always');
-      // 'RangeCompiledVersion:7' output = max(input) - min(input);
-      m = pcFirstXyz_size[0];
-      pcFirstRange_idx_0 = SD->u6.f20.pcFirstXyz_data[0];
-      pcFirstRange_idx_1 = SD->u6.f20.pcFirstXyz_data[1];
-      for (loop_ub = 2; loop_ub <= m; loop_ub++) {
-        i50 = 3 * (loop_ub - 1);
-        if (pcFirstRange_idx_0 < SD->u6.f20.pcFirstXyz_data[i50]) {
-          pcFirstRange_idx_0 = SD->u6.f20.pcFirstXyz_data[i50];
-        }
+          m = pcFirstXyz_size[0];
+          b_kmeansC[0] = SD->u6.f20.pcFirstXyz_data[0];
+          b_kmeansC[1] = SD->u6.f20.pcFirstXyz_data[1];
+          for (loop_ub = 2; loop_ub <= m; loop_ub++) {
+            i46 = 3 * (loop_ub - 1);
+            if (b_kmeansC[0] > SD->u6.f20.pcFirstXyz_data[i46]) {
+              b_kmeansC[0] = SD->u6.f20.pcFirstXyz_data[i46];
+            }
 
-        pcFirstDistanceToPlane = SD->u6.f20.pcFirstXyz_data[1 + i50];
-        if (pcFirstRange_idx_1 < pcFirstDistanceToPlane) {
-          pcFirstRange_idx_1 = pcFirstDistanceToPlane;
-        }
-      }
+            pcFirstDistanceToPlane = SD->u6.f20.pcFirstXyz_data[1 + i46];
+            if (b_kmeansC[1] > pcFirstDistanceToPlane) {
+              b_kmeansC[1] = pcFirstDistanceToPlane;
+            }
+          }
 
-      m = pcFirstXyz_size[0];
-      minval[0] = SD->u6.f20.pcFirstXyz_data[0];
-      minval[1] = SD->u6.f20.pcFirstXyz_data[1];
-      for (loop_ub = 2; loop_ub <= m; loop_ub++) {
-        i50 = 3 * (loop_ub - 1);
-        if (minval[0] > SD->u6.f20.pcFirstXyz_data[i50]) {
-          minval[0] = SD->u6.f20.pcFirstXyz_data[i50];
-        }
+          pcFirstRange_idx_0 -= b_kmeansC[0];
+          pcFirstRange_idx_1 -= b_kmeansC[1];
 
-        pcFirstDistanceToPlane = SD->u6.f20.pcFirstXyz_data[1 + i50];
-        if (minval[1] > pcFirstDistanceToPlane) {
-          minval[1] = pcFirstDistanceToPlane;
-        }
-      }
+          // pcSecondOrg = select(ptCloudSenceReflectors, find(kmeansIdx == 2)); 
+          // 'SmartLoaderEstiamteLocations:92' pcSecondOrgXyz = ptCloudSenceReflectorsXyz(kmeansIdx == 2,:); 
+          //  figure, PlotPointCloud(pcSecondOrg);
+          // 'SmartLoaderEstiamteLocations:95' [pcSecondXyz] = FilterPointCloudAccordingToZdifferences(pcSecondOrgXyz, configParams.reflectorMaxZaxisDistanceForOutlierMeter); 
+          m = kmeansIdx_size[0] - 1;
+          trueCount = 0;
+          for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+            if (SD->u6.f20.kmeansIdx_data[loop_ub] == 2.0) {
+              trueCount++;
+            }
+          }
 
-      pcFirstRange_idx_0 -= minval[0];
-      pcFirstRange_idx_1 -= minval[1];
+          partialTrueCount = 0;
+          for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+            if (SD->u6.f20.kmeansIdx_data[loop_ub] == 2.0) {
+              SD->u6.f20.e_tmp_data[partialTrueCount] = loop_ub + 1;
+              partialTrueCount++;
+            }
+          }
 
-      // pcSecondOrg = select(ptCloudSenceReflectors, find(kmeansIdx == 2));
-      // 'SmartLoaderEstiamteLocations:72' pcSecondOrgXyz = ptCloudSenceReflectorsXyz(kmeansIdx == 2,:); 
-      //  figure, PlotPointCloud(pcSecondOrg);
-      // 'SmartLoaderEstiamteLocations:75' [pcSecondXyz] = FilterPointCloudAccordingToZdifferences(pcSecondOrgXyz, configParams.reflectorMaxZaxisDistanceForOutlierMeter); 
-      m = kmeansIdx_size[0] - 1;
-      trueCount = 0;
-      for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-        if (SD->u6.f20.kmeansIdx_data[loop_ub] == 2.0) {
-          trueCount++;
-        }
-      }
+          d_ptCloudSenceReflectorsXyz_size[1] = 3;
+          d_ptCloudSenceReflectorsXyz_size[0] = trueCount;
+          for (i46 = 0; i46 < trueCount; i46++) {
+            m = 3 * (SD->u6.f20.e_tmp_data[i46] - 1);
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[3 * i46] =
+              SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[1 + 3 * i46] =
+              SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[2 + 3 * i46] =
+              SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
+          }
 
-      partialTrueCount = 0;
-      for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-        if (SD->u6.f20.kmeansIdx_data[loop_ub] == 2.0) {
-          SD->u6.f20.e_tmp_data[partialTrueCount] = loop_ub + 1;
-          partialTrueCount++;
-        }
-      }
+          FilterPointCloudAccordingToZdifferences(SD,
+            SD->u6.f20.b_ptCloudSenceReflectorsXyz_data,
+            d_ptCloudSenceReflectorsXyz_size,
+            configParams->reflectorMaxZaxisDistanceForOutlierMeter,
+            SD->u6.f20.pcSecondXyz_data, input_sizes);
 
-      d_ptCloudSenceReflectorsXyz_size[1] = 3;
-      d_ptCloudSenceReflectorsXyz_size[0] = trueCount;
-      for (i50 = 0; i50 < trueCount; i50++) {
-        m = 3 * (SD->u6.f20.e_tmp_data[i50] - 1);
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[3 * i50] =
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[1 + 3 * i50] =
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data[2 + 3 * i50] =
-          SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
-      }
+          //  figure, PlotPointCloud(pcSecond);
+          // pcSecondRange = RangeCompiledVersion(pcSecond.Location);
+          // 'SmartLoaderEstiamteLocations:98' pcSecondRange = RangeCompiledVersion(pcSecondXyz); 
+          // 'RangeCompiledVersion:4' coder.inline('always');
+          // 'RangeCompiledVersion:7' output = max(input) - min(input);
+          m = input_sizes[0];
+          pcSecondRange_idx_0 = SD->u6.f20.pcSecondXyz_data[0];
+          pcSecondRange_idx_1 = SD->u6.f20.pcSecondXyz_data[1];
+          for (loop_ub = 2; loop_ub <= m; loop_ub++) {
+            i46 = 3 * (loop_ub - 1);
+            if (pcSecondRange_idx_0 < SD->u6.f20.pcSecondXyz_data[i46]) {
+              pcSecondRange_idx_0 = SD->u6.f20.pcSecondXyz_data[i46];
+            }
 
-      FilterPointCloudAccordingToZdifferences(SD,
-        SD->u6.f20.b_ptCloudSenceReflectorsXyz_data,
-        d_ptCloudSenceReflectorsXyz_size,
-        configParams->reflectorMaxZaxisDistanceForOutlierMeter,
-        SD->u6.f20.pcSecondXyz_data, input_sizes);
+            pcFirstDistanceToPlane = SD->u6.f20.pcSecondXyz_data[1 + i46];
+            if (pcSecondRange_idx_1 < pcFirstDistanceToPlane) {
+              pcSecondRange_idx_1 = pcFirstDistanceToPlane;
+            }
+          }
 
-      //  figure, PlotPointCloud(pcSecond);
-      // pcSecondRange = RangeCompiledVersion(pcSecond.Location);
-      // 'SmartLoaderEstiamteLocations:78' pcSecondRange = RangeCompiledVersion(pcSecondXyz); 
-      // 'RangeCompiledVersion:4' coder.inline('always');
-      // 'RangeCompiledVersion:7' output = max(input) - min(input);
-      m = input_sizes[0];
-      pcSecondRange_idx_0 = SD->u6.f20.pcSecondXyz_data[0];
-      pcSecondRange_idx_1 = SD->u6.f20.pcSecondXyz_data[1];
-      for (loop_ub = 2; loop_ub <= m; loop_ub++) {
-        i50 = 3 * (loop_ub - 1);
-        if (pcSecondRange_idx_0 < SD->u6.f20.pcSecondXyz_data[i50]) {
-          pcSecondRange_idx_0 = SD->u6.f20.pcSecondXyz_data[i50];
-        }
+          m = input_sizes[0];
+          b_kmeansC[0] = SD->u6.f20.pcSecondXyz_data[0];
+          b_kmeansC[1] = SD->u6.f20.pcSecondXyz_data[1];
+          for (loop_ub = 2; loop_ub <= m; loop_ub++) {
+            i46 = 3 * (loop_ub - 1);
+            if (b_kmeansC[0] > SD->u6.f20.pcSecondXyz_data[i46]) {
+              b_kmeansC[0] = SD->u6.f20.pcSecondXyz_data[i46];
+            }
 
-        pcFirstDistanceToPlane = SD->u6.f20.pcSecondXyz_data[1 + i50];
-        if (pcSecondRange_idx_1 < pcFirstDistanceToPlane) {
-          pcSecondRange_idx_1 = pcFirstDistanceToPlane;
-        }
-      }
+            pcFirstDistanceToPlane = SD->u6.f20.pcSecondXyz_data[1 + i46];
+            if (b_kmeansC[1] > pcFirstDistanceToPlane) {
+              b_kmeansC[1] = pcFirstDistanceToPlane;
+            }
+          }
 
-      m = input_sizes[0];
-      minval[0] = SD->u6.f20.pcSecondXyz_data[0];
-      minval[1] = SD->u6.f20.pcSecondXyz_data[1];
-      for (loop_ub = 2; loop_ub <= m; loop_ub++) {
-        i50 = 3 * (loop_ub - 1);
-        if (minval[0] > SD->u6.f20.pcSecondXyz_data[i50]) {
-          minval[0] = SD->u6.f20.pcSecondXyz_data[i50];
-        }
+          pcSecondRange_idx_0 -= b_kmeansC[0];
+          pcSecondRange_idx_1 -= b_kmeansC[1];
 
-        pcFirstDistanceToPlane = SD->u6.f20.pcSecondXyz_data[1 + i50];
-        if (minval[1] > pcFirstDistanceToPlane) {
-          minval[1] = pcFirstDistanceToPlane;
-        }
-      }
+          //     %% Determine which cluster is the loader or the shovel
+          //  First stradegy - the loader point cloud reflector is the cluster center closest to the previous loader location 
+          //  This is simply for letting matlab coder know that ptCloudLoaderReflectors and  ptCloudShovelReflectors will eventually set to a certain value 
+          //  we give them an initial value that will change during the code
+          // ptCloudLoaderReflectors = pcSecond;
+          // 'SmartLoaderEstiamteLocations:106' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
+          ptCloudSenceReflectorsXyz_size[0] = input_sizes[0];
+          m = input_sizes[1] * input_sizes[0];
+          if (0 <= m - 1) {
+            memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
+                   &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
+                    sizeof(float)));
+          }
 
-      pcSecondRange_idx_0 -= minval[0];
-      pcSecondRange_idx_1 -= minval[1];
+          // ptCloudShovelReflectors = pcFirst;
+          // 'SmartLoaderEstiamteLocations:108' ptCloudShovelReflectorsXyz = pcFirstXyz; 
+          ptCloudShovelReflectorsXyz_size[1] = 3;
+          ptCloudShovelReflectorsXyz_size[0] = pcFirstXyz_size[0];
+          partialTrueCount = pcFirstXyz_size[1] * pcFirstXyz_size[0];
+          if (0 <= partialTrueCount - 1) {
+            memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
+                   &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
+                   (partialTrueCount * (int)sizeof(float)));
+          }
 
-      //     %% Determine which cluster is the loader or the shovel
-      //  First stradegy - the loader point cloud reflector is the cluster center closest to the previous loader location 
-      //  This is simply for letting matlab coder know that ptCloudLoaderReflectors and  ptCloudShovelReflectors will eventually set to a certain value 
-      //  we give them an initial value that will change during the code
-      // ptCloudLoaderReflectors = pcSecond;
-      // 'SmartLoaderEstiamteLocations:86' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
-      ptCloudSenceReflectorsXyz_size[0] = input_sizes[0];
-      m = input_sizes[1] * input_sizes[0];
-      if (0 <= m - 1) {
-        memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
-               &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)sizeof
-                (float)));
-      }
+          // 'SmartLoaderEstiamteLocations:111' isFoundLoaderPc = false;
+          isFoundLoaderPc = false;
 
-      // ptCloudShovelReflectors = pcFirst;
-      // 'SmartLoaderEstiamteLocations:88' ptCloudShovelReflectorsXyz = pcFirstXyz; 
-      ptCloudShovelReflectorsXyz_size[1] = 3;
-      ptCloudShovelReflectorsXyz_size[0] = pcFirstXyz_size[0];
-      partialTrueCount = pcFirstXyz_size[1] * pcFirstXyz_size[0];
-      if (0 <= partialTrueCount - 1) {
-        memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
-               &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)(partialTrueCount *
-                (int)sizeof(float)));
-      }
+          // 'SmartLoaderEstiamteLocations:112' if ~isempty(SmartLoaderGlobal.smartLoaderStructHistory) 
+          if (SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] != 0) {
+            // 'SmartLoaderEstiamteLocations:113' if size(SmartLoaderGlobal.smartLoaderStructHistory,1) >= 2 && ... 
+            // 'SmartLoaderEstiamteLocations:114'                 configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end) < configParams.maximumTimeTagDiffMs && ... 
+            // 'SmartLoaderEstiamteLocations:115'                 configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end-1) < configParams.maximumTimeTagDiffMs 
+            guard2 = false;
+            if (SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] >= 2)
+            {
+              u0 = SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.data[SD->
+                pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] - 1];
+              u1 = configParams->timeTagMs - u0;
+              if (u1 < configParams->maximumTimeTagDiffMs) {
+                u2 = SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.data
+                  [SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] - 2];
+                if (configParams->timeTagMs - u2 <
+                    configParams->maximumTimeTagDiffMs) {
+                  //  Estiamte where loader location should be according to the previous locations of the loader 
+                  // 'SmartLoaderEstiamteLocations:118' v = (SmartLoaderGlobal.smartLoaderStructHistory(end).loaderLoc - SmartLoaderGlobal.smartLoaderStructHistory(end-1).loaderLoc) / ... 
+                  // 'SmartLoaderEstiamteLocations:119'                 double(SmartLoaderGlobal.loaderTimeTatHistoryMs(end) - SmartLoaderGlobal.loaderTimeTatHistoryMs(end-1)); 
+                  d5 = (double)(u0 - u2);
 
-      // 'SmartLoaderEstiamteLocations:91' isFoundLoaderPc = false;
-      isFoundLoaderPc = false;
+                  // .
+                  // 'SmartLoaderEstiamteLocations:121' estimatedLoaderLoc = SmartLoaderGlobal.smartLoaderStructHistory(end).loaderLoc + .... 
+                  // 'SmartLoaderEstiamteLocations:122'                 v * double(configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end)); 
+                  v_idx_0 = SD->
+                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
+                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                    loaderLoc[0] + (SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                                    [SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size
+                                    [0] - 1].loaderLoc[0] - SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                                    [SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size
+                                    [0] - 2].loaderLoc[0]) / d5 * (double)u1;
+                  v_idx_1 = SD->
+                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
+                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                    loaderLoc[1] + (SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                                    [SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size
+                                    [0] - 1].loaderLoc[1] - SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                                    [SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size
+                                    [0] - 2].loaderLoc[1]) / d5 * (double)u1;
+                  singleReflectorRangeLimitMeter = SD->
+                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
+                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                    loaderLoc[2] + (SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                                    [SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size
+                                    [0] - 1].loaderLoc[2] - SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                                    [SD->
+                                    pd->SmartLoaderGlobal.smartLoaderStructHistory.size
+                                    [0] - 2].loaderLoc[2]) / d5 * (double)u1;
+                } else {
+                  guard2 = true;
+                }
+              } else {
+                guard2 = true;
+              }
+            } else {
+              guard2 = true;
+            }
 
-      // 'SmartLoaderEstiamteLocations:92' if ~isempty(SmartLoaderGlobal.smartLoaderStructHistory) 
-      if (SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] != 0) {
-        // 'SmartLoaderEstiamteLocations:93' if size(SmartLoaderGlobal.smartLoaderStructHistory,1) >= 2 && ... 
-        // 'SmartLoaderEstiamteLocations:94'                 configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end) < configParams.maximumTimeTagDiffMs && ... 
-        // 'SmartLoaderEstiamteLocations:95'                 configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end-1) < configParams.maximumTimeTagDiffMs 
-        guard1 = false;
-        if (SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] >= 2) {
-          u0 = SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.data[SD->
-            pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] - 1];
-          u1 = configParams->timeTagMs - u0;
-          if (u1 < configParams->maximumTimeTagDiffMs) {
-            u2 = SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.data[SD->
-              pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] - 2];
-            if (configParams->timeTagMs - u2 <
-                configParams->maximumTimeTagDiffMs) {
-              //  Estiamte where loader location should be according to the previous locations of the loader 
-              // 'SmartLoaderEstiamteLocations:98' v = (SmartLoaderGlobal.smartLoaderStructHistory(end).loaderLoc - SmartLoaderGlobal.smartLoaderStructHistory(end-1).loaderLoc) / ... 
-              // 'SmartLoaderEstiamteLocations:99'                 double(SmartLoaderGlobal.loaderTimeTatHistoryMs(end) - SmartLoaderGlobal.loaderTimeTatHistoryMs(end-1)); 
-              d5 = (double)(u0 - u2);
-
-              // .
-              // 'SmartLoaderEstiamteLocations:101' estimatedLoaderLoc = SmartLoaderGlobal.smartLoaderStructHistory(end).loaderLoc + .... 
-              // 'SmartLoaderEstiamteLocations:102'                 v * double(configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end)); 
+            if (guard2) {
+              // 'SmartLoaderEstiamteLocations:123' else
+              // 'SmartLoaderEstiamteLocations:124' estimatedLoaderLoc = SmartLoaderGlobal.smartLoaderStructHistory(end).loaderLoc; 
               v_idx_0 = SD->pd->
                 SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
                 pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-                loaderLoc[0] + (SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                                [SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.size
-                                [0] - 1].loaderLoc[0] - SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                                [SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.size
-                                [0] - 2].loaderLoc[0]) / d5 * (double)u1;
+                loaderLoc[0];
               v_idx_1 = SD->pd->
                 SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
                 pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-                loaderLoc[1] + (SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                                [SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.size
-                                [0] - 1].loaderLoc[1] - SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                                [SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.size
-                                [0] - 2].loaderLoc[1]) / d5 * (double)u1;
+                loaderLoc[1];
               singleReflectorRangeLimitMeter = SD->
                 pd->SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
                 pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-                loaderLoc[2] + (SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                                [SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.size
-                                [0] - 1].loaderLoc[2] - SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                                [SD->
-                                pd->SmartLoaderGlobal.smartLoaderStructHistory.size
-                                [0] - 2].loaderLoc[2]) / d5 * (double)u1;
-            } else {
-              guard1 = true;
-            }
-          } else {
-            guard1 = true;
-          }
-        } else {
-          guard1 = true;
-        }
-
-        if (guard1) {
-          // 'SmartLoaderEstiamteLocations:103' else
-          // 'SmartLoaderEstiamteLocations:104' estimatedLoaderLoc = SmartLoaderGlobal.smartLoaderStructHistory(end).loaderLoc; 
-          v_idx_0 = SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-            [SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-            loaderLoc[0];
-          v_idx_1 = SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-            [SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-            loaderLoc[1];
-          singleReflectorRangeLimitMeter = SD->
-            pd->SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
-            pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-            loaderLoc[2];
-        }
-
-        // 'SmartLoaderEstiamteLocations:107' if ~isempty(estimatedLoaderLoc)
-        // 'SmartLoaderEstiamteLocations:109' distanceToKmeansClusterMeter = vecnorm((kmeansC - [estimatedLoaderLoc'; estimatedLoaderLoc'])'); 
-        b_kmeansC[0] = kmeansC[0] - (float)v_idx_0;
-        b_kmeansC[1] = kmeansC[3] - (float)v_idx_0;
-        b_kmeansC[2] = kmeansC[1] - (float)v_idx_1;
-        b_kmeansC[3] = kmeansC[4] - (float)v_idx_1;
-        b_kmeansC[4] = kmeansC[2] - (float)singleReflectorRangeLimitMeter;
-        b_kmeansC[5] = kmeansC[5] - (float)singleReflectorRangeLimitMeter;
-        vecnorm(b_kmeansC, distanceToKmeansClusterMeter);
-
-        //  There are 38 cm distance between the two reflectors,
-        //  we'd like ensure the previous location of the loader reside within a 10cm margin 
-        // 'SmartLoaderEstiamteLocations:113' if any(distanceToKmeansClusterMeter - configParams.previousLoaderLocationToCurrentLocationMaximumDistanceMeter < 0) 
-        b_distanceToKmeansClusterMeter[0] = (distanceToKmeansClusterMeter[0] -
-          (float)
-          configParams->previousLoaderLocationToCurrentLocationMaximumDistanceMeter
-          < 0.0F);
-        b_distanceToKmeansClusterMeter[1] = (distanceToKmeansClusterMeter[1] -
-          (float)
-          configParams->previousLoaderLocationToCurrentLocationMaximumDistanceMeter
-          < 0.0F);
-        if (any(b_distanceToKmeansClusterMeter)) {
-          // 'SmartLoaderEstiamteLocations:115' if distanceToKmeansClusterMeter(1) < distanceToKmeansClusterMeter(2) 
-          if (distanceToKmeansClusterMeter[0] < distanceToKmeansClusterMeter[1])
-          {
-            // ptCloudLoaderReflectors = pcFirst; ptCloudShovelReflectors = pcSecond; 
-            // 'SmartLoaderEstiamteLocations:117' ptCloudLoaderReflectorsXyz = pcFirstXyz; 
-            ptCloudSenceReflectorsXyz_size[0] = pcFirstXyz_size[0];
-            if (0 <= partialTrueCount - 1) {
-              memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
-                     &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
-                     (partialTrueCount * (int)sizeof(float)));
+                loaderLoc[2];
             }
 
-            // 'SmartLoaderEstiamteLocations:117' ptCloudShovelReflectorsXyz = pcSecondXyz; 
-            ptCloudShovelReflectorsXyz_size[1] = 3;
-            ptCloudShovelReflectorsXyz_size[0] = input_sizes[0];
-            if (0 <= m - 1) {
-              memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
-                     &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
-                      sizeof(float)));
-            }
-          } else {
-            // 'SmartLoaderEstiamteLocations:118' else
-            // ptCloudLoaderReflectors = pcSecond; ptCloudShovelReflectors = pcFirst; 
-            // 'SmartLoaderEstiamteLocations:120' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
-            // 'SmartLoaderEstiamteLocations:120' ptCloudShovelReflectorsXyz = pcFirstXyz; 
-          }
-
-          // 'SmartLoaderEstiamteLocations:123' isFoundLoaderPc = true;
-          isFoundLoaderPc = true;
-        }
-      }
-
-      // 'SmartLoaderEstiamteLocations:128' if ~isFoundLoaderPc
-      if (!isFoundLoaderPc) {
-        //  Stradegy - we know that the loader height from the ground plane is fix number, however the shovel is mostly 
-        //  reside below this height - therefor we'll determine the loader and the shovel according to the loader minimum height 
-        //  Find the point with the median z coordiante
-        // [~, I] = sort(pcFirst.Location(:,3));
-        // 'SmartLoaderEstiamteLocations:134' if size(pcFirstXyz,1) == 1
-        if (pcFirstXyz_size[0] == 1) {
-          // 'SmartLoaderEstiamteLocations:135' [pcFirstDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, pcFirstXyz(1,:)); 
-          CalcPlaneToPointDistance(configParams->planeModelParameters, *(float (*)
-            [3])&SD->u6.f20.pcFirstXyz_data[0], &pcFirstDistanceToPlane,
-            &empty_non_axis_sizes);
-
-          // 'SmartLoaderEstiamteLocations:135' ~
-        } else {
-          // 'SmartLoaderEstiamteLocations:136' else
-          // 'SmartLoaderEstiamteLocations:137' [~, I] = sort(pcFirstXyz(:,3));
-          x_size[0] = pcFirstXyz_size[0];
-          loop_ub = pcFirstXyz_size[0];
-          for (i50 = 0; i50 < loop_ub; i50++) {
-            SD->u6.f20.x_data[i50] = SD->u6.f20.pcFirstXyz_data[2 + 3 * i50];
-          }
-
-          sort(SD->u6.f20.x_data, x_size, SD->u6.f20.iidx_data, kmeansIdx_size);
-
-          // 'SmartLoaderEstiamteLocations:137' ~
-          // 'SmartLoaderEstiamteLocations:138' zMedianPointFirst = pcFirstXyz(floor(size(I,1)/2),:); 
-          // 'SmartLoaderEstiamteLocations:139' [pcFirstDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, zMedianPointFirst); 
-          CalcPlaneToPointDistance(configParams->planeModelParameters, *(float (*)
-            [3])&SD->u6.f20.pcFirstXyz_data[3 * ((int)std::floor((double)
-            kmeansIdx_size[0] / 2.0) - 1)], &pcFirstDistanceToPlane,
-            &empty_non_axis_sizes);
-
-          // 'SmartLoaderEstiamteLocations:139' ~
-        }
-
-        // 'SmartLoaderEstiamteLocations:142' if size(pcSecondXyz,1) == 1
-        if (input_sizes[0] == 1) {
-          // 'SmartLoaderEstiamteLocations:143' [pcSecondDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, pcSecondXyz(1,:)); 
-          CalcPlaneToPointDistance(configParams->planeModelParameters, *(float (*)
-            [3])&SD->u6.f20.pcSecondXyz_data[0], &pcSecondDistanceToPlane,
-            &empty_non_axis_sizes);
-
-          // 'SmartLoaderEstiamteLocations:143' ~
-        } else {
-          // 'SmartLoaderEstiamteLocations:144' else
-          // 'SmartLoaderEstiamteLocations:145' [~, I] = sort(pcSecondXyz(:,3)); 
-          x_size[0] = input_sizes[0];
-          loop_ub = input_sizes[0];
-          for (i50 = 0; i50 < loop_ub; i50++) {
-            SD->u6.f20.x_data[i50] = SD->u6.f20.pcSecondXyz_data[2 + 3 * i50];
-          }
-
-          sort(SD->u6.f20.x_data, x_size, SD->u6.f20.iidx_data, kmeansIdx_size);
-
-          // 'SmartLoaderEstiamteLocations:145' ~
-          // 'SmartLoaderEstiamteLocations:146' zMedianPointSecond = pcSecondXyz(floor(size(I,1)/2),:); 
-          // 'SmartLoaderEstiamteLocations:147' [pcSecondDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, zMedianPointSecond); 
-          CalcPlaneToPointDistance(configParams->planeModelParameters, *(float (*)
-            [3])&SD->u6.f20.pcSecondXyz_data[3 * ((int)std::floor((double)
-            kmeansIdx_size[0] / 2.0) - 1)], &pcSecondDistanceToPlane,
-            &empty_non_axis_sizes);
-
-          // 'SmartLoaderEstiamteLocations:147' ~
-        }
-
-        // 'SmartLoaderEstiamteLocations:151' if pcFirstDistanceToPlane > configParams.minimumDistanceFromLoaderToPlaneMeter &&... 
-        // 'SmartLoaderEstiamteLocations:152'                 pcSecondDistanceToPlane < configParams.minimumDistanceFromLoaderToPlaneMeter 
-        if ((pcFirstDistanceToPlane >
-             configParams->minimumDistanceFromLoaderToPlaneMeter) &&
-            (pcSecondDistanceToPlane <
-             configParams->minimumDistanceFromLoaderToPlaneMeter)) {
-          // 'SmartLoaderEstiamteLocations:153' ptCloudLoaderReflectorsXyz = pcFirstXyz; 
-          ptCloudSenceReflectorsXyz_size[0] = pcFirstXyz_size[0];
-          if (0 <= partialTrueCount - 1) {
-            memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
-                   &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
-                   (partialTrueCount * (int)sizeof(float)));
-          }
-
-          // 'SmartLoaderEstiamteLocations:153' ptCloudShovelReflectorsXyz = pcSecondXyz; 
-          ptCloudShovelReflectorsXyz_size[1] = 3;
-          ptCloudShovelReflectorsXyz_size[0] = input_sizes[0];
-          if (0 <= m - 1) {
-            memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
-                   &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
-                    sizeof(float)));
-          }
-
-          // 'SmartLoaderEstiamteLocations:154' isFoundLoaderPc = true;
-          isFoundLoaderPc = true;
-        } else {
-          if ((pcFirstDistanceToPlane <
-               configParams->minimumDistanceFromLoaderToPlaneMeter) &&
-              (pcSecondDistanceToPlane >
-               configParams->minimumDistanceFromLoaderToPlaneMeter)) {
-            // 'SmartLoaderEstiamteLocations:156' elseif pcFirstDistanceToPlane < configParams.minimumDistanceFromLoaderToPlaneMeter &&... 
-            // 'SmartLoaderEstiamteLocations:157'                 pcSecondDistanceToPlane > configParams.minimumDistanceFromLoaderToPlaneMeter 
-            // 'SmartLoaderEstiamteLocations:158' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
-            ptCloudSenceReflectorsXyz_size[0] = input_sizes[0];
-            if (0 <= m - 1) {
-              memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
-                     &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
-                      sizeof(float)));
-            }
-
-            // 'SmartLoaderEstiamteLocations:158' ptCloudShovelReflectorsXyz = pcFirstXyz; 
-            ptCloudShovelReflectorsXyz_size[1] = 3;
-            ptCloudShovelReflectorsXyz_size[0] = pcFirstXyz_size[0];
-            if (0 <= partialTrueCount - 1) {
-              memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
-                     &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
-                     (partialTrueCount * (int)sizeof(float)));
-            }
-
-            // 'SmartLoaderEstiamteLocations:159' isFoundLoaderPc = true;
-            isFoundLoaderPc = true;
-          }
-        }
-      }
-
-      // 'SmartLoaderEstiamteLocations:164' if ~isFoundLoaderPc
-      // 'SmartLoaderEstiamteLocations:173' if ~isFoundLoaderPc
-      if (!isFoundLoaderPc) {
-        //  Third stradegy - determine the range for both clusters, the loader reflector suppose to be circle shaped 
-        //  and the shovel reflector supposes to be much more rectangular shaped 
-        // 'SmartLoaderEstiamteLocations:176' pcFirstMinorToMajorRation = min(pcFirstRange(1:2)) / max(pcFirstRange(1:2)); 
-        // 'SmartLoaderEstiamteLocations:177' pcSecondMinorToMajorRation = min(pcSecondRange(1:2)) / max(pcSecondRange(1:2)); 
-        //  TODO : add a limit to the differenct between pcFirstMinorToMajorRation to pcSecondMinorToMajorRation 
-        // 'SmartLoaderEstiamteLocations:180' if pcSecondMinorToMajorRation < pcFirstMinorToMajorRation 
-        if (pcSecondRange_idx_0 > pcSecondRange_idx_1) {
-          b_pcSecondRange_idx_0 = pcSecondRange_idx_1;
-        } else {
-          b_pcSecondRange_idx_0 = pcSecondRange_idx_0;
-        }
-
-        if (pcSecondRange_idx_0 < pcSecondRange_idx_1) {
-          c_pcSecondRange_idx_0 = pcSecondRange_idx_1;
-        } else {
-          c_pcSecondRange_idx_0 = pcSecondRange_idx_0;
-        }
-
-        if (pcFirstRange_idx_0 > pcFirstRange_idx_1) {
-          b_pcFirstRange_idx_0 = pcFirstRange_idx_1;
-        } else {
-          b_pcFirstRange_idx_0 = pcFirstRange_idx_0;
-        }
-
-        if (pcFirstRange_idx_0 < pcFirstRange_idx_1) {
-          c_pcFirstRange_idx_0 = pcFirstRange_idx_1;
-        } else {
-          c_pcFirstRange_idx_0 = pcFirstRange_idx_0;
-        }
-
-        if (b_pcSecondRange_idx_0 / c_pcSecondRange_idx_0 < b_pcFirstRange_idx_0
-            / c_pcFirstRange_idx_0) {
-          // 'SmartLoaderEstiamteLocations:181' ptCloudLoaderReflectorsXyz = pcFirstXyz; 
-          ptCloudSenceReflectorsXyz_size[0] = pcFirstXyz_size[0];
-          if (0 <= partialTrueCount - 1) {
-            memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
-                   &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
-                   (partialTrueCount * (int)sizeof(float)));
-          }
-
-          // 'SmartLoaderEstiamteLocations:181' ptCloudShovelReflectorsXyz = pcSecondXyz; 
-          ptCloudShovelReflectorsXyz_size[1] = 3;
-          ptCloudShovelReflectorsXyz_size[0] = input_sizes[0];
-          if (0 <= m - 1) {
-            memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
-                   &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
-                    sizeof(float)));
-          }
-        } else {
-          // 'SmartLoaderEstiamteLocations:182' else
-          // 'SmartLoaderEstiamteLocations:183' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
-          ptCloudSenceReflectorsXyz_size[0] = input_sizes[0];
-          if (0 <= m - 1) {
-            memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
-                   &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
-                    sizeof(float)));
-          }
-
-          // 'SmartLoaderEstiamteLocations:183' ptCloudShovelReflectorsXyz = pcFirstXyz; 
-          ptCloudShovelReflectorsXyz_size[1] = 3;
-          ptCloudShovelReflectorsXyz_size[0] = pcFirstXyz_size[0];
-          if (0 <= partialTrueCount - 1) {
-            memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
-                   &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
-                   (partialTrueCount * (int)sizeof(float)));
-          }
-        }
-      }
-
-      //  figure, PlotPointCloud(ptCloudLoaderReflectorsXyz);
-      //  figure, PlotPointCloud(ptCloudShovelReflectorsXyz);
-      //     %% Estimate the shovel loc
-      // 'SmartLoaderEstiamteLocations:191' if size(ptCloudShovelReflectorsXyz,1) >= configParams.minPointsForReflector 
-      if (ptCloudShovelReflectorsXyz_size[0] >=
-          configParams->minPointsForReflector) {
-        // 'SmartLoaderEstiamteLocations:192' smartLoaderStruct.shovelLoc = double(mean(ptCloudShovelReflectorsXyz)'); 
-        mean(SD->u6.f20.ptCloudShovelReflectorsXyz_data,
-             ptCloudShovelReflectorsXyz_size, minval);
-        smartLoaderStruct->shovelLoc[0] = minval[0];
-        smartLoaderStruct->shovelLoc[1] = minval[1];
-        smartLoaderStruct->shovelLoc[2] = minval[2];
-
-        // 'SmartLoaderEstiamteLocations:193' smartLoaderStruct.shovelLocStatus = true; 
-        smartLoaderStruct->shovelLocStatus = true;
-      }
-    } else {
-      //     %%
-      //  We assume the reflectors hold only the loader!
-      // 'SmartLoaderEstiamteLocations:30' if coder.target('Matlab')
-      //  TODO - handle the reflectors here !!!
-      // ptCloudLoaderReflectors = ptCloudSenceReflectors;
-      // 'SmartLoaderEstiamteLocations:35' ptCloudLoaderReflectorsXyz = ptCloudSenceReflectorsXyz; 
-      // 'SmartLoaderEstiamteLocations:36' ptCloudLoaderReflectorsIntensity = ptCloudSenceReflectorsIntensity; 
-      //  figure, PlotPointCloud(ptCloudSenceReflectors);
-      //  figure, PlotPointCloud(ptCloudLoaderReflectors);
-    }
-
-    //  Remove outliers points in the loader point cloud. these points z's coordinate difference is larger than the following threshold 
-    //  Remove points which are outliers in the z axis
-    //  figure, PlotPointCloud(ptCloudLoaderReflectors);
-    // 'SmartLoaderEstiamteLocations:200' zCor = ptCloudLoaderReflectorsXyz(:,3); 
-    loop_ub = ptCloudSenceReflectorsXyz_size[0];
-    for (i50 = 0; i50 < loop_ub; i50++) {
-      SD->u6.f20.tmp_data[i50] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + 3
-        * i50];
-    }
-
-    // 'SmartLoaderEstiamteLocations:201' zMedian = median(zCor);
-    iv2[0] = ptCloudSenceReflectorsXyz_size[0];
-    pcSecondDistanceToPlane = median(SD, SD->u6.f20.tmp_data, iv2);
-
-    // 'SmartLoaderEstiamteLocations:202' assert(numel(zMedian) == 1);
-    // 'SmartLoaderEstiamteLocations:203' loaderReflectorPtrInd = abs(zCor - zMedian) <= configParams.loaderReflectorMaxZaxisDistanceForOutlierMeter; 
-    loop_ub = ptCloudSenceReflectorsXyz_size[0];
-    tmp_size[0] = ptCloudSenceReflectorsXyz_size[0];
-    for (i50 = 0; i50 < loop_ub; i50++) {
-      SD->u6.f20.c_tmp_data[i50] = SD->u6.f20.tmp_data[i50] -
-        pcSecondDistanceToPlane;
-    }
-
-    b_abs(SD->u6.f20.c_tmp_data, tmp_size, SD->u6.f20.x_data, x_size);
-    loop_ub = x_size[0];
-    for (i50 = 0; i50 < loop_ub; i50++) {
-      SD->u6.f20.ptCloudSenceReflectorsInd_data[i50] = (SD->u6.f20.x_data[i50] <=
-        configParams->loaderReflectorMaxZaxisDistanceForOutlierMeter);
-    }
-
-    //  sum(loaderReflectorPtrInd)
-    // ptCloudLoaderReflectorsFilterd = select(ptCloudLoaderReflectors, find(loaderReflectorPtrInd)); 
-    // 'SmartLoaderEstiamteLocations:206' ptCloudLoaderReflectorsFilterdXyz = ptCloudLoaderReflectorsXyz(loaderReflectorPtrInd,:); 
-    //  figure, PlotPointCloud(ptCloudLoaderReflectorsXyz);
-    //  figure, PlotPointCloud(ptCloudLoaderReflectorsFilterdXyz);
-    //  Determine the number of lines, determine the cluster of lines.
-    //  Determine Find the number of lines
-    // 'SmartLoaderEstiamteLocations:213' coder.varsize('ptr', [SmartLoaderCompilationConstants.MaxPointCloudSize 3], [1 0]); 
-    // 'SmartLoaderEstiamteLocations:215' if coder.target('Matlab') && false
-    // 'SmartLoaderEstiamteLocations:227' else
-    //  Cluster in 2D
-    // 'SmartLoaderEstiamteLocations:229' coder.varsize('clustersYs', 'clustersXs', [1 64], [0 1]); 
-    // 'SmartLoaderEstiamteLocations:230' [clustersXs, clustersYs] = ClusterPoints2D(ptCloudLoaderReflectorsFilterdXyz(:,1:2), configParams.maxDistanceBetweenEachRayMeter); 
-    m = x_size[0] - 1;
-    trueCount = 0;
-    for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-      if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
-        trueCount++;
-      }
-    }
-
-    partialTrueCount = 0;
-    for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-      if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
-        SD->u6.f20.d_tmp_data[partialTrueCount] = loop_ub + 1;
-        partialTrueCount++;
-      }
-    }
-
-    for (i50 = 0; i50 < trueCount; i50++) {
-      m = 3 * (SD->u6.f20.d_tmp_data[i50] - 1);
-      SD->u6.f20.pcSecondXyz_data[3 * i50] =
-        SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
-      SD->u6.f20.pcSecondXyz_data[1 + 3 * i50] =
-        SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
-      SD->u6.f20.pcSecondXyz_data[2 + 3 * i50] =
-        SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
-    }
-
-    c_ptCloudSenceReflectorsXyz_size[1] = 2;
-    c_ptCloudSenceReflectorsXyz_size[0] = trueCount;
-    for (i50 = 0; i50 < trueCount; i50++) {
-      m = i50 << 1;
-      SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
-        SD->u6.f20.pcSecondXyz_data[3 * i50];
-      SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
-        SD->u6.f20.pcSecondXyz_data[1 + 3 * i50];
-    }
-
-    emxInit_cell_wrap_3_64x1(&clustersXs);
-    emxInit_cell_wrap_3_64x1(&clustersYs);
-    ClusterPoints2D(SD, SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
-                    c_ptCloudSenceReflectorsXyz_size,
-                    configParams->maxDistanceBetweenEachRayMeter,
-                    clustersXs.data, clustersXs.size, clustersYs.data,
-                    clustersYs.size);
-
-    // 'SmartLoaderEstiamteLocations:231' if isempty(clustersXs)
-    //  remove small clusters with less than 3 points
-    // 'SmartLoaderEstiamteLocations:239' minimumNumPointsInCluster = 3;
-    //  cellfun doens't works with matlab coder
-    //  Previous code: clustersXs(cellfun('length',clustersXs)<minimumNumPointsInCluster) = []; 
-    //  Previous code: clustersYs(cellfun('length',clustersYs)<minimumNumPointsInCluster) = []; 
-    //  In order to solve this issue - I have coded the filter function by my own 
-    // 'SmartLoaderEstiamteLocations:245' isInvalid = zeros(1,size(clustersXs,2),'logical'); 
-    // 'SmartLoaderEstiamteLocations:246' for i = 1:size(clustersXs,2)
-    for (loop_ub = 0; loop_ub < 64; loop_ub++) {
-      isInvalid_data[loop_ub] = false;
-
-      // 'SmartLoaderEstiamteLocations:247' if size(clustersXs{i},1) < minimumNumPointsInCluster 
-      if (clustersXs.data[loop_ub].f1->size[0] < 3) {
-        // 'SmartLoaderEstiamteLocations:248' isInvalid(i) = true;
-        isInvalid_data[loop_ub] = true;
-      }
-    }
-
-    emxInit_cell_wrap_3_64x1(&r2);
-
-    // 'SmartLoaderEstiamteLocations:251' clustersXs(isInvalid) = [];
-    nullAssignment(clustersXs.data, isInvalid_data, r2.data, r2.size);
-
-    // 'SmartLoaderEstiamteLocations:252' clustersYs(isInvalid) = [];
-    nullAssignment(clustersYs.data, isInvalid_data, clustersXs.data,
-                   clustersXs.size);
-
-    // 'SmartLoaderEstiamteLocations:255' if isempty(clustersXs)
-    emxFree_cell_wrap_3_64x1(&clustersYs);
-    if (r2.size[1] != 0) {
-      // 'SmartLoaderEstiamteLocations:261' if numel(clustersXs) == 1
-      if (r2.size[1] == 1) {
-        // 'SmartLoaderEstiamteLocations:262' if coder.target('Matlab')
-        // 'SmartLoaderEstiamteLocations:265' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailed; 
-        smartLoaderStruct->status = PerceptionSmartLoaderReturnValue_eFailed;
-      } else {
-        // 'SmartLoaderEstiamteLocations:269' if coder.target('Matlab') && false 
-        //     %% Get the extreme points for each cluster - these points will be use for circle center estimation 
-        // 'SmartLoaderEstiamteLocations:282' coder.varsize('extremePoints', [SmartLoaderCompilationConstants.MaxNumClusters 2], [1 0]); 
-        // 'SmartLoaderEstiamteLocations:284' extremePoints = zeros(0,2,'like', ptCloudLoaderReflectorsFilterdXyz); 
-        extremePoints_size[1] = 2;
-        extremePoints_size[0] = 0;
-
-        // 'SmartLoaderEstiamteLocations:285' for q = 1:numel(clustersXs)
-        i50 = r2.size[1];
-        emxInit_real32_T(&pdistOutput, 2);
-        emxInit_real32_T(&Z, 2);
-        emxInitMatrix_cell_wrap_3(reshapes);
-        emxInit_real32_T(&varargin_1, 1);
-        emxInitMatrix_cell_wrap_3(b_reshapes);
-        emxInitMatrix_cell_wrap_3(c_reshapes);
-        emxInit_real32_T(&d_reshapes, 2);
-        for (q = 0; q < i50; q++) {
-          // 'SmartLoaderEstiamteLocations:286' pdistOutput = pdist([clustersXs{q} clustersYs{q}]); 
-          if ((r2.data[q].f1->size[0] != 0) && (r2.data[q].f1->size[1] != 0)) {
-            m = r2.data[q].f1->size[0];
-          } else if ((clustersXs.data[q].f1->size[0] != 0) && (clustersXs.data[q]
-                      .f1->size[1] != 0)) {
-            m = clustersXs.data[q].f1->size[0];
-          } else {
-            m = r2.data[q].f1->size[0];
-            if (m <= 0) {
-              m = 0;
-            }
-
-            if (clustersXs.data[q].f1->size[0] > m) {
-              m = clustersXs.data[q].f1->size[0];
-            }
-          }
-
-          empty_non_axis_sizes = (m == 0);
-          if (empty_non_axis_sizes || ((r2.data[q].f1->size[0] != 0) &&
-               (r2.data[q].f1->size[1] != 0))) {
-            partialTrueCount = r2.data[q].f1->size[1];
-          } else {
-            partialTrueCount = 0;
-          }
-
-          if ((partialTrueCount == r2.data[q].f1->size[1]) && (m == r2.data[q].
-               f1->size[0])) {
-            i51 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
-            reshapes[0].f1->size[1] = partialTrueCount;
-            reshapes[0].f1->size[0] = m;
-            emxEnsureCapacity_real32_T(reshapes[0].f1, i51);
-            loop_ub = partialTrueCount * m;
-            for (i51 = 0; i51 < loop_ub; i51++) {
-              reshapes[0].f1->data[i51] = r2.data[q].f1->data[i51];
-            }
-          } else {
-            i51 = 0;
-            i52 = 0;
-            trueCount = 0;
-            i53 = 0;
-            loop_ub = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
-            reshapes[0].f1->size[1] = partialTrueCount;
-            reshapes[0].f1->size[0] = m;
-            emxEnsureCapacity_real32_T(reshapes[0].f1, loop_ub);
-            for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
-              reshapes[0].f1->data[i52 + reshapes[0].f1->size[1] * i51] =
-                r2.data[q].f1->data[i53 + r2.data[q].f1->size[1] * trueCount];
-              i51++;
-              trueCount++;
-              if (i51 > reshapes[0].f1->size[0] - 1) {
-                i51 = 0;
-                i52++;
-              }
-
-              if (trueCount > r2.data[q].f1->size[0] - 1) {
-                trueCount = 0;
-                i53++;
-              }
-            }
-          }
-
-          if (empty_non_axis_sizes || ((clustersXs.data[q].f1->size[0] != 0) &&
-               (clustersXs.data[q].f1->size[1] != 0))) {
-            b_input_sizes = (signed char)clustersXs.data[q].f1->size[1];
-          } else {
-            b_input_sizes = 0;
-          }
-
-          partialTrueCount = b_input_sizes;
-          if ((b_input_sizes == clustersXs.data[q].f1->size[1]) && (m ==
-               clustersXs.data[q].f1->size[0])) {
-            i51 = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
-            reshapes[1].f1->size[1] = b_input_sizes;
-            reshapes[1].f1->size[0] = m;
-            emxEnsureCapacity_real32_T(reshapes[1].f1, i51);
-            loop_ub = b_input_sizes * m;
-            for (i51 = 0; i51 < loop_ub; i51++) {
-              reshapes[1].f1->data[i51] = clustersXs.data[q].f1->data[i51];
-            }
-          } else {
-            i51 = 0;
-            i52 = 0;
-            trueCount = 0;
-            i53 = 0;
-            loop_ub = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
-            reshapes[1].f1->size[1] = b_input_sizes;
-            reshapes[1].f1->size[0] = m;
-            emxEnsureCapacity_real32_T(reshapes[1].f1, loop_ub);
-            for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
-              reshapes[1].f1->data[i52 + reshapes[1].f1->size[1] * i51] =
-                clustersXs.data[q].f1->data[i53 + clustersXs.data[q].f1->size[1]
-                * trueCount];
-              i51++;
-              trueCount++;
-              if (i51 > reshapes[1].f1->size[0] - 1) {
-                i51 = 0;
-                i52++;
-              }
-
-              if (trueCount > clustersXs.data[q].f1->size[0] - 1) {
-                trueCount = 0;
-                i53++;
-              }
-            }
-          }
-
-          i51 = d_reshapes->size[0] * d_reshapes->size[1];
-          d_reshapes->size[1] = reshapes[0].f1->size[1] + reshapes[1].f1->size[1];
-          d_reshapes->size[0] = reshapes[0].f1->size[0];
-          emxEnsureCapacity_real32_T(d_reshapes, i51);
-          loop_ub = reshapes[0].f1->size[0];
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            partialTrueCount = reshapes[0].f1->size[1];
-            for (i52 = 0; i52 < partialTrueCount; i52++) {
-              d_reshapes->data[i52 + d_reshapes->size[1] * i51] = reshapes[0].
-                f1->data[i52 + reshapes[0].f1->size[1] * i51];
-            }
-          }
-
-          loop_ub = reshapes[1].f1->size[0];
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            partialTrueCount = reshapes[1].f1->size[1];
-            for (i52 = 0; i52 < partialTrueCount; i52++) {
-              d_reshapes->data[(i52 + reshapes[0].f1->size[1]) +
-                d_reshapes->size[1] * i51] = reshapes[1].f1->data[i52 +
-                reshapes[1].f1->size[1] * i51];
-            }
-          }
-
-          pdist(d_reshapes, pdistOutput);
-
-          // 'SmartLoaderEstiamteLocations:287' Z = squareform(pdistOutput);
-          squareform(pdistOutput, Z);
-
-          //  Find the cooridnate of the most distanced points
-          // 'SmartLoaderEstiamteLocations:289' [~, maxInd] = max(Z(:));
-          m = Z->size[0] * Z->size[1];
-          i51 = 0;
-          i52 = 0;
-          trueCount = 0;
-          i53 = varargin_1->size[0];
-          varargin_1->size[0] = m;
-          emxEnsureCapacity_real32_T(varargin_1, i53);
-          for (i53 = 0; i53 < m; i53++) {
-            varargin_1->data[i51] = Z->data[trueCount + Z->size[1] * i52];
-            i51++;
-            i52++;
-            if (i52 > Z->size[0] - 1) {
-              i52 = 0;
-              trueCount++;
-            }
-          }
-
-          m = varargin_1->size[0];
-          if (varargin_1->size[0] <= 2) {
-            if (varargin_1->size[0] == 1) {
-              loop_ub = 0;
-            } else {
-              loop_ub = (varargin_1->data[0] < varargin_1->data[1]);
-            }
-          } else {
-            pcFirstDistanceToPlane = varargin_1->data[0];
-            loop_ub = 0;
-            for (partialTrueCount = 2; partialTrueCount <= m; partialTrueCount++)
-            {
-              if (pcFirstDistanceToPlane < varargin_1->data[partialTrueCount - 1])
-              {
-                pcFirstDistanceToPlane = varargin_1->data[partialTrueCount - 1];
-                loop_ub = partialTrueCount - 1;
-              }
-            }
-          }
-
-          // 'SmartLoaderEstiamteLocations:289' ~
-          // 'SmartLoaderEstiamteLocations:291' [row,col] = ind2sub(size(Z), maxInd); 
-          singleReflectorRangeLimitMeter = Z->size[0];
-          m = (int)(unsigned int)singleReflectorRangeLimitMeter;
-          vk = loop_ub / m;
-          m = loop_ub - vk * m;
-
-          // 'SmartLoaderEstiamteLocations:293' tempXs = [clustersXs{q}(row,:) clustersYs{q}(row,:)]; 
-          loop_ub = r2.data[q].f1->size[1];
-          partialTrueCount = clustersXs.data[q].f1->size[1];
-          tempXs_size = loop_ub + partialTrueCount;
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            tempXs_data[i51] = r2.data[q].f1->data[i51 + r2.data[q].f1->size[1] *
-              m];
-          }
-
-          for (i51 = 0; i51 < partialTrueCount; i51++) {
-            tempXs_data[i51 + loop_ub] = clustersXs.data[q].f1->data[i51 +
-              clustersXs.data[q].f1->size[1] * m];
-          }
-
-          // 'SmartLoaderEstiamteLocations:294' extremePoints = [extremePoints; tempXs]; 
-          if (extremePoints_size[0] != 0) {
-            sizes = 2;
-          } else if (tempXs_size != 0) {
-            sizes = (signed char)tempXs_size;
-          } else {
-            sizes = 2;
-          }
-
-          if (extremePoints_size[0] != 0) {
-            b_input_sizes = (signed char)extremePoints_size[0];
-          } else {
-            b_input_sizes = 0;
-          }
-
-          m = b_input_sizes;
-          partialTrueCount = sizes;
-          if ((sizes == 2) && (b_input_sizes == extremePoints_size[0])) {
-            i51 = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
-            b_reshapes[0].f1->size[1] = 2;
-            b_reshapes[0].f1->size[0] = b_input_sizes;
-            emxEnsureCapacity_real32_T(b_reshapes[0].f1, i51);
-            loop_ub = 2 * b_input_sizes;
-            for (i51 = 0; i51 < loop_ub; i51++) {
-              b_reshapes[0].f1->data[i51] = extremePoints_data[i51];
-            }
-          } else {
-            i51 = 0;
-            i52 = 0;
-            trueCount = 0;
-            i53 = 0;
-            loop_ub = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
-            b_reshapes[0].f1->size[1] = sizes;
-            b_reshapes[0].f1->size[0] = b_input_sizes;
-            emxEnsureCapacity_real32_T(b_reshapes[0].f1, loop_ub);
-            for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
-              b_reshapes[0].f1->data[i52 + b_reshapes[0].f1->size[1] * i51] =
-                extremePoints_data[i53 + (trueCount << 1)];
-              i51++;
-              trueCount++;
-              if (i51 > b_reshapes[0].f1->size[0] - 1) {
-                i51 = 0;
-                i52++;
-              }
-
-              if (trueCount > extremePoints_size[0] - 1) {
-                trueCount = 0;
-                i53++;
-              }
-            }
-          }
-
-          b_input_sizes = (signed char)(tempXs_size != 0);
-          m = b_input_sizes;
-          partialTrueCount = sizes;
-          if ((sizes == tempXs_size) && (b_input_sizes == 1)) {
-            i51 = b_reshapes[1].f1->size[0] * b_reshapes[1].f1->size[1];
-            b_reshapes[1].f1->size[1] = sizes;
-            b_reshapes[1].f1->size[0] = 1;
-            emxEnsureCapacity_real32_T(b_reshapes[1].f1, i51);
-            loop_ub = sizes;
-            for (i51 = 0; i51 < loop_ub; i51++) {
-              b_reshapes[1].f1->data[i51] = tempXs_data[i51];
-            }
-          } else {
-            i51 = 0;
-            i52 = 0;
-            trueCount = 0;
-            i53 = b_reshapes[1].f1->size[0] * b_reshapes[1].f1->size[1];
-            b_reshapes[1].f1->size[1] = sizes;
-            b_reshapes[1].f1->size[0] = b_input_sizes;
-            emxEnsureCapacity_real32_T(b_reshapes[1].f1, i53);
-            for (i53 = 0; i53 < m * partialTrueCount; i53++) {
-              b_reshapes[1].f1->data[i52 + b_reshapes[1].f1->size[1] * i51] =
-                tempXs_data[trueCount];
-              i51++;
-              if (i51 > b_reshapes[1].f1->size[0] - 1) {
-                i51 = 0;
-                i52++;
-              }
-
-              trueCount++;
-            }
-          }
-
-          extremePoints_size_idx_1 = b_reshapes[0].f1->size[1];
-          extremePoints_size_idx_0 = b_reshapes[0].f1->size[0] + b_reshapes[1].
-            f1->size[0];
-          loop_ub = b_reshapes[0].f1->size[0];
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            partialTrueCount = b_reshapes[0].f1->size[1];
-            for (i52 = 0; i52 < partialTrueCount; i52++) {
-              b_extremePoints_data[i52 + extremePoints_size_idx_1 * i51] =
-                b_reshapes[0].f1->data[i52 + b_reshapes[0].f1->size[1] * i51];
-            }
-          }
-
-          loop_ub = b_reshapes[1].f1->size[0];
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            partialTrueCount = b_reshapes[1].f1->size[1];
-            for (i52 = 0; i52 < partialTrueCount; i52++) {
-              b_extremePoints_data[i52 + extremePoints_size_idx_1 * (i51 +
-                b_reshapes[0].f1->size[0])] = b_reshapes[1].f1->data[i52 +
-                b_reshapes[1].f1->size[1] * i51];
-            }
-          }
-
-          // 'SmartLoaderEstiamteLocations:296' tempYs = [clustersXs{q}(col,:) clustersYs{q}(col,:)]; 
-          loop_ub = r2.data[q].f1->size[1];
-          partialTrueCount = clustersXs.data[q].f1->size[1];
-          tempXs_size = loop_ub + partialTrueCount;
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            tempXs_data[i51] = r2.data[q].f1->data[i51 + r2.data[q].f1->size[1] *
-              vk];
-          }
-
-          for (i51 = 0; i51 < partialTrueCount; i51++) {
-            tempXs_data[i51 + loop_ub] = clustersXs.data[q].f1->data[i51 +
-              clustersXs.data[q].f1->size[1] * vk];
-          }
-
-          // 'SmartLoaderEstiamteLocations:297' extremePoints = [extremePoints; tempYs]; 
-          if (extremePoints_size_idx_0 != 0) {
-            sizes = 2;
-          } else if (tempXs_size != 0) {
-            sizes = (signed char)tempXs_size;
-          } else {
-            sizes = 2;
-          }
-
-          if (extremePoints_size_idx_0 != 0) {
-            b_input_sizes = (signed char)extremePoints_size_idx_0;
-          } else {
-            b_input_sizes = 0;
-          }
-
-          m = b_input_sizes;
-          partialTrueCount = sizes;
-          if ((sizes == 2) && (b_input_sizes == extremePoints_size_idx_0)) {
-            i51 = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
-            c_reshapes[0].f1->size[1] = 2;
-            c_reshapes[0].f1->size[0] = b_input_sizes;
-            emxEnsureCapacity_real32_T(c_reshapes[0].f1, i51);
-            loop_ub = 2 * b_input_sizes;
-            for (i51 = 0; i51 < loop_ub; i51++) {
-              c_reshapes[0].f1->data[i51] = b_extremePoints_data[i51];
-            }
-          } else {
-            i51 = 0;
-            i52 = 0;
-            trueCount = 0;
-            i53 = 0;
-            loop_ub = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
-            c_reshapes[0].f1->size[1] = sizes;
-            c_reshapes[0].f1->size[0] = b_input_sizes;
-            emxEnsureCapacity_real32_T(c_reshapes[0].f1, loop_ub);
-            for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
-              c_reshapes[0].f1->data[i52 + c_reshapes[0].f1->size[1] * i51] =
-                b_extremePoints_data[i53 + extremePoints_size_idx_1 * trueCount];
-              i51++;
-              trueCount++;
-              if (i51 > c_reshapes[0].f1->size[0] - 1) {
-                i51 = 0;
-                i52++;
-              }
-
-              if (trueCount > extremePoints_size_idx_0 - 1) {
-                trueCount = 0;
-                i53++;
-              }
-            }
-          }
-
-          b_input_sizes = (signed char)(tempXs_size != 0);
-          m = b_input_sizes;
-          partialTrueCount = sizes;
-          if ((sizes == tempXs_size) && (b_input_sizes == 1)) {
-            i51 = c_reshapes[1].f1->size[0] * c_reshapes[1].f1->size[1];
-            c_reshapes[1].f1->size[1] = sizes;
-            c_reshapes[1].f1->size[0] = 1;
-            emxEnsureCapacity_real32_T(c_reshapes[1].f1, i51);
-            loop_ub = sizes;
-            for (i51 = 0; i51 < loop_ub; i51++) {
-              c_reshapes[1].f1->data[i51] = tempXs_data[i51];
-            }
-          } else {
-            i51 = 0;
-            i52 = 0;
-            trueCount = 0;
-            i53 = c_reshapes[1].f1->size[0] * c_reshapes[1].f1->size[1];
-            c_reshapes[1].f1->size[1] = sizes;
-            c_reshapes[1].f1->size[0] = b_input_sizes;
-            emxEnsureCapacity_real32_T(c_reshapes[1].f1, i53);
-            for (i53 = 0; i53 < m * partialTrueCount; i53++) {
-              c_reshapes[1].f1->data[i52 + c_reshapes[1].f1->size[1] * i51] =
-                tempXs_data[trueCount];
-              i51++;
-              if (i51 > c_reshapes[1].f1->size[0] - 1) {
-                i51 = 0;
-                i52++;
-              }
-
-              trueCount++;
-            }
-          }
-
-          extremePoints_size[1] = c_reshapes[0].f1->size[1];
-          extremePoints_size[0] = c_reshapes[0].f1->size[0] + c_reshapes[1]
-            .f1->size[0];
-          loop_ub = c_reshapes[0].f1->size[0];
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            partialTrueCount = c_reshapes[0].f1->size[1];
-            for (i52 = 0; i52 < partialTrueCount; i52++) {
-              extremePoints_data[i52 + (i51 << 1)] = c_reshapes[0].f1->data[i52
-                + c_reshapes[0].f1->size[1] * i51];
-            }
-          }
-
-          loop_ub = c_reshapes[1].f1->size[0];
-          for (i51 = 0; i51 < loop_ub; i51++) {
-            partialTrueCount = c_reshapes[1].f1->size[1];
-            for (i52 = 0; i52 < partialTrueCount; i52++) {
-              extremePoints_data[i52 + ((i51 + c_reshapes[0].f1->size[0]) << 1)]
-                = c_reshapes[1].f1->data[i52 + c_reshapes[1].f1->size[1] * i51];
-            }
-          }
-        }
-
-        emxFree_real32_T(&d_reshapes);
-        emxFreeMatrix_cell_wrap_3(c_reshapes);
-        emxFreeMatrix_cell_wrap_3(b_reshapes);
-        emxFree_real32_T(&varargin_1);
-        emxFreeMatrix_cell_wrap_3(reshapes);
-        emxFree_real32_T(&Z);
-        emxFree_real32_T(&pdistOutput);
-
-        // 'SmartLoaderEstiamteLocations:300' if false
-        // 'SmartLoaderEstiamteLocations:316' else
-        //  2nd method - Least squere circle fit - 2nd order development to finite equations 
-        // 'SmartLoaderEstiamteLocations:318' meanXsYs = mean(extremePoints,1);
-        b_mean(extremePoints_data, extremePoints_size,
-               distanceToKmeansClusterMeter);
-
-        // 'SmartLoaderEstiamteLocations:319' us = extremePoints(:,1) - meanXsYs(1); 
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          us_data[i50] = extremePoints_data[i50 << 1] -
-            distanceToKmeansClusterMeter[0];
-        }
-
-        // 'SmartLoaderEstiamteLocations:320' vs = extremePoints(:,2) - meanXsYs(2); 
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          vs_data[i50] = extremePoints_data[1 + (i50 << 1)] -
-            distanceToKmeansClusterMeter[1];
-        }
-
-        // 'SmartLoaderEstiamteLocations:322' temp_usus = us.*us;
-        temp_usus_size[0] = extremePoints_size[0];
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          temp_usus_data[i50] = us_data[i50] * us_data[i50];
-        }
-
-        // 'SmartLoaderEstiamteLocations:323' s_uu = sum(temp_usus);
-        // 'SmartLoaderEstiamteLocations:324' s_uuu = sum(temp_usus.*us);
-        // 'SmartLoaderEstiamteLocations:325' temp_vsvs = vs.*vs;
-        temp_vsvs_size[0] = extremePoints_size[0];
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          temp_vsvs_data[i50] = vs_data[i50] * vs_data[i50];
-        }
-
-        // 'SmartLoaderEstiamteLocations:326' s_vv = sum(temp_vsvs);
-        // 'SmartLoaderEstiamteLocations:327' s_vvv = sum(vs.*temp_vsvs);
-        // 'SmartLoaderEstiamteLocations:329' temp_vsus = vs.*us;
-        temp_vsus_size[0] = extremePoints_size[0];
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          temp_vsus_data[i50] = vs_data[i50] * us_data[i50];
-        }
-
-        // 'SmartLoaderEstiamteLocations:330' s_vu = sum(temp_vsus);
-        pcFirstDistanceToPlane = c_sum(temp_vsus_data, temp_vsus_size);
-
-        // 'SmartLoaderEstiamteLocations:331' s_uvv = sum(temp_vsus.*vs);
-        // 'SmartLoaderEstiamteLocations:332' s_vuu = sum(temp_vsus.*us);
-        // 'SmartLoaderEstiamteLocations:334' A = [s_uu s_vu; s_vu s_vv];
-        // 'SmartLoaderEstiamteLocations:335' b = 0.5 * [s_uuu + s_uvv; s_vvv + s_vuu]; 
-        // 'SmartLoaderEstiamteLocations:337' cxyEst = inv(A) * b;
-        // 'SmartLoaderEstiamteLocations:338' cxyEst = cxyEst + meanXsYs';
-        fv0[0] = c_sum(temp_usus_data, temp_usus_size);
-        fv0[1] = pcFirstDistanceToPlane;
-        fv0[2] = pcFirstDistanceToPlane;
-        fv0[3] = c_sum(temp_vsvs_data, temp_vsvs_size);
-        b_inv(fv0, fv1);
-        b_temp_usus_size[0] = extremePoints_size[0];
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          b_temp_usus_data[i50] = temp_usus_data[i50] * us_data[i50];
-        }
-
-        b_temp_vsus_size[0] = extremePoints_size[0];
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          b_temp_vsus_data[i50] = temp_vsus_data[i50] * vs_data[i50];
-        }
-
-        vs_size[0] = extremePoints_size[0];
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          b_vs_data[i50] = vs_data[i50] * temp_vsvs_data[i50];
-        }
-
-        c_temp_vsus_size[0] = extremePoints_size[0];
-        loop_ub = extremePoints_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          temp_usus_data[i50] = temp_vsus_data[i50] * us_data[i50];
-        }
-
-        cxyEst[0] = 0.5F * (c_sum(b_temp_usus_data, b_temp_usus_size) + c_sum
-                            (b_temp_vsus_data, b_temp_vsus_size));
-        cxyEst[1] = 0.5F * (c_sum(b_vs_data, vs_size) + c_sum(temp_usus_data,
-          c_temp_vsus_size));
-        pcFirstDistanceToPlane = cxyEst[0] * fv1[2] + cxyEst[1] * fv1[3];
-        cxyEst[0] = (cxyEst[0] * fv1[0] + cxyEst[1] * fv1[1]) +
-          distanceToKmeansClusterMeter[0];
-        cxyEst[1] = pcFirstDistanceToPlane + distanceToKmeansClusterMeter[1];
-
-        // 'SmartLoaderEstiamteLocations:341' if coder.target('Matlab') &&  false 
-        //     %% Calculate the mean squre error for the estiamted model
-        // 'SmartLoaderEstiamteLocations:361' modelErr1 = bsxfun(@minus, extremePoints, cxyEst'); 
-        bsxfun(extremePoints_data, extremePoints_size, cxyEst,
-               SD->u6.f20.kmeansDistanceMat_data, input_sizes);
-        modelErr1_size[0] = input_sizes[0];
-        loop_ub = input_sizes[1] * input_sizes[0];
-        if (0 <= loop_ub - 1) {
-          memcpy(&modelErr1_data[0], &SD->u6.f20.kmeansDistanceMat_data[0],
-                 (unsigned int)(loop_ub * (int)sizeof(float)));
-        }
-
-        // 'SmartLoaderEstiamteLocations:362' modelErr1 = modelErr1 .* modelErr1; 
-        modelErr1_size[1] = 2;
-        loop_ub = (input_sizes[0] << 1) - 1;
-        for (i50 = 0; i50 <= loop_ub; i50++) {
-          modelErr1_data[i50] *= modelErr1_data[i50];
-        }
-
-        // 'SmartLoaderEstiamteLocations:363' modelErr1 = sqrt(sum(modelErr1, 2)) - ((configParams.loaderReflectorDiameterMeter/2)); 
-        b_sum(modelErr1_data, modelErr1_size, SD->u6.f20.x_data, x_size);
-        us_size[0] = x_size[0];
-        if (0 <= x_size[0] - 1) {
-          memcpy(&us_data[0], &SD->u6.f20.x_data[0], (unsigned int)(x_size[0] *
-                  (int)sizeof(float)));
-        }
-
-        b_sqrt(us_data, us_size);
-        v_idx_0 = configParams->loaderReflectorDiameterMeter / 2.0;
-        loop_ub = us_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          us_data[i50] -= (float)v_idx_0;
-        }
-
-        // 'SmartLoaderEstiamteLocations:364' mse = sum(modelErr1 .* modelErr1) / size(extremePoints,1); 
-        // 'SmartLoaderEstiamteLocations:366' if mse > configParams.loaderReflectorDiameterMeter 
-        b_us_size[0] = us_size[0];
-        loop_ub = us_size[0];
-        for (i50 = 0; i50 < loop_ub; i50++) {
-          temp_usus_data[i50] = us_data[i50] * us_data[i50];
-        }
-
-        if (c_sum(temp_usus_data, b_us_size) / (float)extremePoints_size[0] >
-            configParams->loaderReflectorDiameterMeter) {
-          // 'SmartLoaderEstiamteLocations:367' if coder.target('Matlab')
-          // 'SmartLoaderEstiamteLocations:370' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailedLoaderLocation; 
-          smartLoaderStruct->status =
-            PerceptionSmartLoaderReturnValue_eFailedLoaderLocation;
-        } else {
-          // 'SmartLoaderEstiamteLocations:374' smartLoaderStruct.loaderLoc = double([cxyEst; zMedian]); 
-          smartLoaderStruct->loaderLoc[0] = cxyEst[0];
-          smartLoaderStruct->loaderLoc[1] = cxyEst[1];
-          smartLoaderStruct->loaderLoc[2] = pcSecondDistanceToPlane;
-
-          //  Ensure minimal distance from the loader location to the ground plane 
-          //  The loader height is around 27cm, we can ensure at least half of this size from the ground plane 
-          // 'SmartLoaderEstiamteLocations:379' [loaderLocToPlaneDistance, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, smartLoaderStruct.loaderLoc'); 
-          b_CalcPlaneToPointDistance(configParams->planeModelParameters,
-            smartLoaderStruct->loaderLoc, &singleReflectorRangeLimitMeter,
-            &empty_non_axis_sizes);
-
-          // 'SmartLoaderEstiamteLocations:379' ~
-          // 'SmartLoaderEstiamteLocations:380' if loaderLocToPlaneDistance < configParams.minimumDistanceFromLoaderToPlaneMeter 
-          if (singleReflectorRangeLimitMeter <
-              configParams->minimumDistanceFromLoaderToPlaneMeter) {
-            // 'SmartLoaderEstiamteLocations:381' smartLoaderStruct.loaderLocStatus = false; 
-            smartLoaderStruct->loaderLocStatus = false;
-
-            // 'SmartLoaderEstiamteLocations:383' if coder.target('Matlab')
-            // 'SmartLoaderEstiamteLocations:386' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailedLoaderLocation; 
-            smartLoaderStruct->status =
-              PerceptionSmartLoaderReturnValue_eFailedLoaderLocation;
-          } else {
-            // 'SmartLoaderEstiamteLocations:390' smartLoaderStruct.loaderLocStatus = true; 
-            smartLoaderStruct->loaderLocStatus = true;
-
-            //  Calcualte the yaw angle of the loader
-            //  Get all the poitns that are close to the loader
-            // 'SmartLoaderEstiamteLocations:394' if smartLoaderStruct.loaderLocStatus && smartLoaderStruct.shovelLocStatus 
-            if (smartLoaderStruct->shovelLocStatus) {
-              //  figure, PlotPointCloud(ptCloudSenceXyz);
-              // 'SmartLoaderEstiamteLocations:397' ptCloudSenceXyzFromLoaderLoc = bsxfun(@minus, ptCloudSenceXyz(:,1:2), cast(smartLoaderStruct.loaderLoc(1:2)', 'like', ptCloudSenceXyz)); 
-              // 'SmartLoaderEstiamteLocations:398' distanecToLoader = vecnorm(ptCloudSenceXyzFromLoaderLoc,2,2); 
-              // 'SmartLoaderEstiamteLocations:399' isInsideLoaderReflector = distanecToLoader < configParams.loaderCenterToBackwardPointMeter + configParams.loaderWhiteHatMeter / 2; 
-              loop_ub = ptCloudSenceXyz_size[0];
-              b_ptCloudSenceXyz_size[1] = 2;
-              b_ptCloudSenceXyz_size[0] = ptCloudSenceXyz_size[0];
-              for (i50 = 0; i50 < loop_ub; i50++) {
-                m = i50 << 1;
-                SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
-                  ptCloudSenceXyz_data[3 * i50];
-                SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
-                  ptCloudSenceXyz_data[1 + 3 * i50];
-              }
-
-              distanceToKmeansClusterMeter[0] = (float)
-                smartLoaderStruct->loaderLoc[0];
-              distanceToKmeansClusterMeter[1] = (float)
-                smartLoaderStruct->loaderLoc[1];
-              bsxfun(SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
-                     b_ptCloudSenceXyz_size, distanceToKmeansClusterMeter,
-                     SD->u6.f20.kmeansDistanceMat_data, input_sizes);
-              b_vecnorm(SD->u6.f20.kmeansDistanceMat_data, input_sizes,
-                        SD->u6.f20.x_data, x_size);
-              singleReflectorRangeLimitMeter =
-                configParams->loaderCenterToBackwardPointMeter +
-                configParams->loaderWhiteHatMeter / 2.0;
-              loop_ub = x_size[0];
-              for (i50 = 0; i50 < loop_ub; i50++) {
-                SD->u6.f20.ptCloudSenceReflectorsInd_data[i50] =
-                  (SD->u6.f20.x_data[i50] < singleReflectorRangeLimitMeter);
-              }
-
-              // 'SmartLoaderEstiamteLocations:401' loaderXyz = ptCloudSenceXyz(isInsideLoaderReflector,:); 
-              m = x_size[0] - 1;
-              trueCount = 0;
-              for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-                if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
-                  trueCount++;
-                }
-              }
-
-              partialTrueCount = 0;
-              for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-                if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
-                  SD->u6.f20.f_tmp_data[partialTrueCount] = loop_ub + 1;
-                  partialTrueCount++;
-                }
-              }
-
-              ptCloudSenceReflectorsXyz_size[1] = 3;
-              ptCloudSenceReflectorsXyz_size[0] = trueCount;
-              for (i50 = 0; i50 < trueCount; i50++) {
-                m = 3 * (SD->u6.f20.f_tmp_data[i50] - 1);
-                SD->u6.f20.ptCloudSenceReflectorsXyz_data[3 * i50] =
-                  ptCloudSenceXyz_data[m];
-                SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + 3 * i50] =
-                  ptCloudSenceXyz_data[1 + m];
-                SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + 3 * i50] =
-                  ptCloudSenceXyz_data[2 + m];
-              }
-
-              //  figure, PlotPointCloud(loaderXyz);
-              //  Get all points higher than 10cm from the ground
-              // 'SmartLoaderEstiamteLocations:405' [loaderXyzPlaneDistance, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, loaderXyz); 
-              c_CalcPlaneToPointDistance(SD, configParams->planeModelParameters,
-                SD->u6.f20.ptCloudSenceReflectorsXyz_data,
-                ptCloudSenceReflectorsXyz_size, SD->u6.f20.x_data, x_size,
-                SD->u6.f20.ptCloudSenceReflectorsInd_data, kmeansIdx_size);
-
-              // 'SmartLoaderEstiamteLocations:405' ~
-              // 'SmartLoaderEstiamteLocations:407' coder.varsize('loaderXyzFiltered', [SmartLoaderCompilationConstants.MaxPointCloudSize 3], [1 0]); 
-              // 'SmartLoaderEstiamteLocations:408' loaderXyzFiltered = loaderXyz(loaderXyzPlaneDistance > configParams.maxDistanceFromThePlaneForLoaderYawCalculation,:); 
-              loop_ub = x_size[0];
-              for (i50 = 0; i50 < loop_ub; i50++) {
-                SD->u6.f20.ptCloudSenceReflectorsInd_data[i50] =
-                  (SD->u6.f20.x_data[i50] >
-                   configParams->maxDistanceFromThePlaneForLoaderYawCalculation);
-              }
-
-              m = x_size[0] - 1;
-              trueCount = 0;
-              for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-                if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
-                  trueCount++;
-                }
-              }
-
-              partialTrueCount = 0;
-              for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-                if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
-                  SD->u6.f20.g_tmp_data[partialTrueCount] = loop_ub + 1;
-                  partialTrueCount++;
-                }
-              }
-
-              for (i50 = 0; i50 < trueCount; i50++) {
-                m = 3 * (SD->u6.f20.g_tmp_data[i50] - 1);
-                SD->u6.f20.pcFirstXyz_data[3 * i50] =
-                  SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
-                SD->u6.f20.pcFirstXyz_data[1 + 3 * i50] =
-                  SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
-                SD->u6.f20.pcFirstXyz_data[2 + 3 * i50] =
-                  SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
-              }
-
-              // 'SmartLoaderEstiamteLocations:409' if false
-              //  In case we have the previous loader yaw angle, use it in order to mask the loader points - Othewise - use all the points (loader and shovel) 
-              // 'SmartLoaderEstiamteLocations:415' if ~isempty(SmartLoaderGlobal.smartLoaderStructHistory) && SmartLoaderGlobal.smartLoaderStructHistory(end).loaderYawAngleStatus && ... 
-              // 'SmartLoaderEstiamteLocations:416'             configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end) < configParams.maximumTimeTagDiffMs 
-              if ((SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] !=
-                   0) && SD->pd->
-                  SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
-                  pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-                  loaderYawAngleStatus && (configParams->timeTagMs - SD->
-                   pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.data[SD->
-                   pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] - 1] <
-                   configParams->maximumTimeTagDiffMs)) {
-                //  Filter the point according to the previous yaw angle
-                //  determine which points reside inside the loader reflector
-                // 'SmartLoaderEstiamteLocations:421' loaderXyzFilteredStartFromLoaderLoc = bsxfun(@minus, loaderXyzFiltered(:,1:2), cast(smartLoaderStruct.loaderLoc(1:2)', 'like', ptCloudSenceXyz)); 
-                // 'SmartLoaderEstiamteLocations:422' distanceFromLoaderToXYZ = vecnorm(loaderXyzFilteredStartFromLoaderLoc,2,2); 
-                // 'SmartLoaderEstiamteLocations:423' isInsideLoaderReflector = distanceFromLoaderToXYZ < (configParams.locationsBiasMeter + configParams.loaderReflectorDiameterMeter / 2); 
-                b_pcFirstXyz_size[1] = 2;
-                b_pcFirstXyz_size[0] = trueCount;
-                for (i50 = 0; i50 < trueCount; i50++) {
-                  m = i50 << 1;
-                  SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
-                    SD->u6.f20.pcFirstXyz_data[3 * i50];
-                  SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
-                    SD->u6.f20.pcFirstXyz_data[1 + 3 * i50];
+            // 'SmartLoaderEstiamteLocations:127' if ~isempty(estimatedLoaderLoc) 
+            // 'SmartLoaderEstiamteLocations:129' distanceToKmeansClusterMeter = vecnorm((kmeansC - [estimatedLoaderLoc'; estimatedLoaderLoc'])'); 
+            c_kmeansC[0] = kmeansC[0] - (float)v_idx_0;
+            c_kmeansC[1] = kmeansC[3] - (float)v_idx_0;
+            c_kmeansC[2] = kmeansC[1] - (float)v_idx_1;
+            c_kmeansC[3] = kmeansC[4] - (float)v_idx_1;
+            c_kmeansC[4] = kmeansC[2] - (float)singleReflectorRangeLimitMeter;
+            c_kmeansC[5] = kmeansC[5] - (float)singleReflectorRangeLimitMeter;
+            vecnorm(c_kmeansC, distanceToKmeansClusterMeter);
+
+            //  There are 38 cm distance between the two reflectors,
+            //  we'd like ensure the previous location of the loader reside within a 10cm margin 
+            // 'SmartLoaderEstiamteLocations:133' if any(distanceToKmeansClusterMeter - configParams.previousLoaderLocationToCurrentLocationMaximumDistanceMeter < 0) 
+            b_r[0] = (distanceToKmeansClusterMeter[0] - (float)
+                      configParams->previousLoaderLocationToCurrentLocationMaximumDistanceMeter
+                      < 0.0F);
+            b_r[1] = (distanceToKmeansClusterMeter[1] - (float)
+                      configParams->previousLoaderLocationToCurrentLocationMaximumDistanceMeter
+                      < 0.0F);
+            if (any(b_r)) {
+              // 'SmartLoaderEstiamteLocations:135' if distanceToKmeansClusterMeter(1) < distanceToKmeansClusterMeter(2) 
+              if (distanceToKmeansClusterMeter[0] <
+                  distanceToKmeansClusterMeter[1]) {
+                // ptCloudLoaderReflectors = pcFirst; ptCloudShovelReflectors = pcSecond; 
+                // 'SmartLoaderEstiamteLocations:137' ptCloudLoaderReflectorsXyz = pcFirstXyz; 
+                ptCloudSenceReflectorsXyz_size[0] = pcFirstXyz_size[0];
+                if (0 <= partialTrueCount - 1) {
+                  memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
+                         &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
+                         (partialTrueCount * (int)sizeof(float)));
                 }
 
-                distanceToKmeansClusterMeter[0] = (float)
-                  smartLoaderStruct->loaderLoc[0];
-                distanceToKmeansClusterMeter[1] = (float)
-                  smartLoaderStruct->loaderLoc[1];
-                bsxfun(SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
-                       b_pcFirstXyz_size, distanceToKmeansClusterMeter,
-                       SD->u6.f20.kmeansDistanceMat_data, input_sizes);
-                b_vecnorm(SD->u6.f20.kmeansDistanceMat_data, input_sizes,
-                          SD->u6.f20.x_data, x_size);
-                singleReflectorRangeLimitMeter =
-                  configParams->locationsBiasMeter + v_idx_0;
-                loop_ub = x_size[0];
-                for (i50 = 0; i50 < loop_ub; i50++) {
-                  SD->u6.f20.ptCloudSenceReflectorsInd_data[i50] =
-                    (SD->u6.f20.x_data[i50] < singleReflectorRangeLimitMeter);
-                }
-
-                // 'SmartLoaderEstiamteLocations:425' if false
-                //  Find the bounding box location of the loader
-                // 'SmartLoaderEstiamteLocations:431' loaderToShovel2Dvec = [1 0]; 
-                // 'SmartLoaderEstiamteLocations:432' currentAngleDeg = SmartLoaderGlobal.smartLoaderStructHistory(end).loaderYawAngleDeg; 
-                // 'SmartLoaderEstiamteLocations:433' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
-                // 'SmartLoaderEstiamteLocations:434' loaderToShovel2Dvec = loaderToShovel2Dvec * rotMatCCW; 
-                d5 = SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                  [SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] -
-                  1].loaderYawAngleDeg;
-                b_cosd(&d5);
-                d6 = SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.data
-                  [SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] -
-                  1].loaderYawAngleDeg;
-                b_sind(&d6);
-                v_idx_0 = SD->
-                  pd->SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
-                  pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-                  loaderYawAngleDeg;
-                b_sind(&v_idx_0);
-                v_idx_0 = SD->
-                  pd->SmartLoaderGlobal.smartLoaderStructHistory.data[SD->
-                  pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
-                  loaderYawAngleDeg;
-                b_cosd(&v_idx_0);
-
-                // 'SmartLoaderEstiamteLocations:435' if false
-                // 'SmartLoaderEstiamteLocations:441' currentAngleDeg = 90;
-                // 'SmartLoaderEstiamteLocations:442' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
-                // 'SmartLoaderEstiamteLocations:443' p1 = smartLoaderStruct.loaderLoc(1:2) + (configParams.locationsBiasMeter + configParams.loaderWidthMeter/2) * (loaderToShovel2Dvec * rotMatCCW)'; 
-                singleReflectorRangeLimitMeter = configParams->loaderWidthMeter /
-                  2.0;
-                a_tmp = configParams->locationsBiasMeter +
-                  singleReflectorRangeLimitMeter;
-
-                // 'SmartLoaderEstiamteLocations:445' currentAngleDeg = -90;
-                // 'SmartLoaderEstiamteLocations:446' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
-                // 'SmartLoaderEstiamteLocations:447' p4 = smartLoaderStruct.loaderLoc(1:2) + (configParams.locationsBiasMeter + configParams.loaderWidthMeter/2) * (loaderToShovel2Dvec * rotMatCCW)'; 
-                // 'SmartLoaderEstiamteLocations:449' loaderToLeftBackOftheLoaderAng = atan2d(configParams.loaderCenterToBackwardPointMeter, configParams.loaderWidthMeter/2); 
-                v_idx_1 = 57.295779513082323 * atan2
-                  (configParams->loaderCenterToBackwardPointMeter,
-                   singleReflectorRangeLimitMeter);
-
-                // 'SmartLoaderEstiamteLocations:450' loaderToLeftBackOftheLoaderDistanceMeter = configParams.locationsBiasMeter + norm( [configParams.loaderWidthMeter/2; configParams.loaderCenterToBackwardPointMeter]); 
-                p4[0] = singleReflectorRangeLimitMeter;
-                p4[1] = configParams->loaderCenterToBackwardPointMeter;
-                loaderToLeftBackOftheLoaderDistanceMeter =
-                  configParams->locationsBiasMeter + c_norm(p4);
-
-                // 'SmartLoaderEstiamteLocations:452' currentAngleDeg = loaderToLeftBackOftheLoaderAng + 90; 
-                // 'SmartLoaderEstiamteLocations:453' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
-                // 'SmartLoaderEstiamteLocations:454' p2 = smartLoaderStruct.loaderLoc(1:2) + loaderToLeftBackOftheLoaderDistanceMeter * (loaderToShovel2Dvec * rotMatCCW)'; 
-                v_idx_0 = v_idx_1 + 90.0;
-                b_cosd(&v_idx_0);
-                d7 = v_idx_1 + 90.0;
-                b_sind(&d7);
-                d8 = v_idx_1 + 90.0;
-                b_sind(&d8);
-                d9 = v_idx_1 + 90.0;
-                b_cosd(&d9);
-
-                // 'SmartLoaderEstiamteLocations:456' currentAngleDeg = currentAngleDeg * -1; 
-                // 'SmartLoaderEstiamteLocations:457' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
-                // 'SmartLoaderEstiamteLocations:458' p3 = smartLoaderStruct.loaderLoc(1:2) + loaderToLeftBackOftheLoaderDistanceMeter * (loaderToShovel2Dvec * rotMatCCW)'; 
-                d10 = -(v_idx_1 + 90.0);
-                b_cosd(&d10);
-                d11 = -(v_idx_1 + 90.0);
-                b_sind(&d11);
-                d12 = -(v_idx_1 + 90.0);
-                b_sind(&d12);
-                singleReflectorRangeLimitMeter = -(v_idx_1 + 90.0);
-                b_cosd(&singleReflectorRangeLimitMeter);
-
-                // 'SmartLoaderEstiamteLocations:460' loaderBBxs = [p1(1);p2(1);p3(1);p4(1)]; 
-                // 'SmartLoaderEstiamteLocations:461' loaderBBys = [p1(2);p2(2);p3(2);p4(2)]; 
-                // 'SmartLoaderEstiamteLocations:463' if false
-                // 'SmartLoaderEstiamteLocations:486' isInsidePolygon = inpolygon(loaderXyzFiltered(:,1), loaderXyzFiltered(:,2), loaderBBxs, loaderBBys); 
-                c_pcFirstXyz_size[0] = trueCount;
-                for (i50 = 0; i50 < trueCount; i50++) {
-                  SD->u6.f20.x_data[i50] = SD->u6.f20.pcFirstXyz_data[3 * i50];
-                }
-
-                for (i50 = 0; i50 < trueCount; i50++) {
-                  SD->u6.f20.tmp_data[i50] = SD->u6.f20.pcFirstXyz_data[1 + 3 *
-                    i50];
-                }
-
-                p1[0] = smartLoaderStruct->loaderLoc[0] + a_tmp * -d6;
-                p1[1] = smartLoaderStruct->loaderLoc[0] +
-                  loaderToLeftBackOftheLoaderDistanceMeter * (v_idx_0 * d5 + -d8
-                  * d6);
-                p1[2] = smartLoaderStruct->loaderLoc[0] +
-                  loaderToLeftBackOftheLoaderDistanceMeter * (d10 * d5 + -d12 *
-                  d6);
-                p1[3] = smartLoaderStruct->loaderLoc[0] + a_tmp * d6;
-                b_p1[0] = smartLoaderStruct->loaderLoc[1] + a_tmp * d5;
-                b_p1[1] = smartLoaderStruct->loaderLoc[1] +
-                  loaderToLeftBackOftheLoaderDistanceMeter * (d7 * d5 + d9 * d6);
-                b_p1[2] = smartLoaderStruct->loaderLoc[1] +
-                  loaderToLeftBackOftheLoaderDistanceMeter * (d11 * d5 +
-                  singleReflectorRangeLimitMeter * d6);
-                b_p1[3] = smartLoaderStruct->loaderLoc[1] + a_tmp * -d5;
-                inpolygon(SD->u6.f20.x_data, c_pcFirstXyz_size,
-                          SD->u6.f20.tmp_data, p1, b_p1,
-                          SD->u6.f20.isInsidePolygon_data, kmeansIdx_size);
-
-                //  loaderXyzFilteredInsidePoly = loaderXyzFiltered(isInsidePolygon,:); figure, PlotPointCloud(loaderXyzFilteredInsidePoly); 
-                // 'SmartLoaderEstiamteLocations:489' isInsideLoaderReflectorOrPolygon = isInsideLoaderReflector | isInsidePolygon; 
-                // 'SmartLoaderEstiamteLocations:490' sum_isInsideLoaderReflectorOrPolygon = sum(isInsideLoaderReflectorOrPolygon); 
-                ptCloudSenceReflectorsInd_size[0] = x_size[0];
-                loop_ub = x_size[0];
-                for (i50 = 0; i50 < loop_ub; i50++) {
-                  SD->u6.f20.b_ptCloudSenceReflectorsInd_data[i50] =
-                    (SD->u6.f20.ptCloudSenceReflectorsInd_data[i50] ||
-                     SD->u6.f20.isInsidePolygon_data[i50]);
-                }
-
-                singleReflectorRangeLimitMeter = e_sum
-                  (SD->u6.f20.b_ptCloudSenceReflectorsInd_data,
-                   ptCloudSenceReflectorsInd_size);
-
-                // 'SmartLoaderEstiamteLocations:492' if sum_isInsideLoaderReflectorOrPolygon / size(loaderXyzFiltered,1) > configParams.yawEstimationMinPercentageOfPointsInLoaderBody && ... 
-                // 'SmartLoaderEstiamteLocations:493'                  sum_isInsideLoaderReflectorOrPolygon > configParams.yawEstimationMinNumPointsInLoaderBody 
-                if ((singleReflectorRangeLimitMeter / (double)trueCount >
-                     configParams->yawEstimationMinPercentageOfPointsInLoaderBody)
-                    && (singleReflectorRangeLimitMeter >
-                        configParams->yawEstimationMinNumPointsInLoaderBody)) {
-                  // 'SmartLoaderEstiamteLocations:495' loaderXyzFilteredInsidePolyAndInsideLoaderBB = loaderXyzFiltered(isInsideLoaderReflectorOrPolygon,:); 
-                  //  figure, PlotPointCloud(loaderXyzFilteredInsidePolyAndInsideLoaderBB);  
-                  // 'SmartLoaderEstiamteLocations:497' [V,D] = SmartLoaderCalcEigen(loaderXyzFilteredInsidePolyAndInsideLoaderBB(:,1:2)); 
-                  m = x_size[0] - 1;
-                  trueCount = 0;
-                  for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-                    if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub] ||
-                        SD->u6.f20.isInsidePolygon_data[loop_ub]) {
-                      trueCount++;
-                    }
-                  }
-
-                  partialTrueCount = 0;
-                  for (loop_ub = 0; loop_ub <= m; loop_ub++) {
-                    if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub] ||
-                        SD->u6.f20.isInsidePolygon_data[loop_ub]) {
-                      SD->u6.f20.h_tmp_data[partialTrueCount] = loop_ub + 1;
-                      partialTrueCount++;
-                    }
-                  }
-
-                  for (i50 = 0; i50 < trueCount; i50++) {
-                    m = 3 * (SD->u6.f20.h_tmp_data[i50] - 1);
-                    SD->u6.f20.pcSecondXyz_data[3 * i50] =
-                      SD->u6.f20.pcFirstXyz_data[m];
-                    SD->u6.f20.pcSecondXyz_data[1 + 3 * i50] =
-                      SD->u6.f20.pcFirstXyz_data[1 + m];
-                    SD->u6.f20.pcSecondXyz_data[2 + 3 * i50] =
-                      SD->u6.f20.pcFirstXyz_data[2 + m];
-                  }
-
-                  d_pcFirstXyz_size[1] = 2;
-                  d_pcFirstXyz_size[0] = trueCount;
-                  for (i50 = 0; i50 < trueCount; i50++) {
-                    m = i50 << 1;
-                    SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
-                      SD->u6.f20.pcSecondXyz_data[3 * i50];
-                    SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
-                      SD->u6.f20.pcSecondXyz_data[1 + 3 * i50];
-                  }
-
-                  SmartLoaderCalcEigen(SD,
-                                       SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
-                                       d_pcFirstXyz_size, V, D);
-                } else {
-                  // 'SmartLoaderEstiamteLocations:498' else
-                  // 'SmartLoaderEstiamteLocations:499' [V,D] = SmartLoaderCalcEigen(loaderXyzFiltered(:,1:2)); 
-                  d_pcFirstXyz_size[1] = 2;
-                  d_pcFirstXyz_size[0] = trueCount;
-                  for (i50 = 0; i50 < trueCount; i50++) {
-                    m = i50 << 1;
-                    SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
-                      SD->u6.f20.pcFirstXyz_data[3 * i50];
-                    SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
-                      SD->u6.f20.pcFirstXyz_data[1 + 3 * i50];
-                  }
-
-                  SmartLoaderCalcEigen(SD,
-                                       SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
-                                       d_pcFirstXyz_size, V, D);
+                // 'SmartLoaderEstiamteLocations:137' ptCloudShovelReflectorsXyz = pcSecondXyz; 
+                ptCloudShovelReflectorsXyz_size[1] = 3;
+                ptCloudShovelReflectorsXyz_size[0] = input_sizes[0];
+                if (0 <= m - 1) {
+                  memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
+                         &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m *
+                          (int)sizeof(float)));
                 }
               } else {
-                // 'SmartLoaderEstiamteLocations:501' else
-                // 'SmartLoaderEstiamteLocations:502' [V,D] = SmartLoaderCalcEigen(loaderXyzFiltered(:,1:2)); 
-                b_pcFirstXyz_size[1] = 2;
-                b_pcFirstXyz_size[0] = trueCount;
-                for (i50 = 0; i50 < trueCount; i50++) {
-                  m = i50 << 1;
-                  SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
-                    SD->u6.f20.pcFirstXyz_data[3 * i50];
-                  SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
-                    SD->u6.f20.pcFirstXyz_data[1 + 3 * i50];
-                }
-
-                SmartLoaderCalcEigen(SD,
-                                     SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
-                                     b_pcFirstXyz_size, V, D);
+                // 'SmartLoaderEstiamteLocations:138' else
+                // ptCloudLoaderReflectors = pcSecond; ptCloudShovelReflectors = pcFirst; 
+                // 'SmartLoaderEstiamteLocations:140' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
+                // 'SmartLoaderEstiamteLocations:140' ptCloudShovelReflectorsXyz = pcFirstXyz; 
               }
 
-              // 'SmartLoaderEstiamteLocations:504' [~,ind] = sort(diag(D));
-              diag(D, largestEigenVec);
-              b_sort(largestEigenVec, input_sizes);
+              // 'SmartLoaderEstiamteLocations:143' isFoundLoaderPc = true;
+              isFoundLoaderPc = true;
+            }
+          }
 
-              // 'SmartLoaderEstiamteLocations:504' ~
-              //  Plot everything
-              //  Pick the largest eigen vector
-              // 'SmartLoaderEstiamteLocations:508' largestEigenVec = V(:,ind(end)); 
-              //  determine whether or not the vector reside on the shovel side or the opposite side 
-              // 'SmartLoaderEstiamteLocations:510' shovelToLoader2DVec = smartLoaderStruct.shovelLoc(1:2) - smartLoaderStruct.loaderLoc(1:2); 
-              largestEigenVec[0] = V[input_sizes[1] - 1];
-              p4[0] = smartLoaderStruct->shovelLoc[0] -
-                smartLoaderStruct->loaderLoc[0];
-              largestEigenVec[1] = V[input_sizes[1] + 1];
-              p4[1] = smartLoaderStruct->shovelLoc[1] -
-                smartLoaderStruct->loaderLoc[1];
+          // 'SmartLoaderEstiamteLocations:148' if ~isFoundLoaderPc
+          if (!isFoundLoaderPc) {
+            //  Stradegy - we know that the loader height from the ground plane is fix number, however the shovel is mostly 
+            //  reside below this height - therefor we'll determine the loader and the shovel according to the loader minimum height 
+            //  Find the point with the median z coordiante
+            // [~, I] = sort(pcFirst.Location(:,3));
+            // 'SmartLoaderEstiamteLocations:154' if size(pcFirstXyz,1) == 1
+            if (pcFirstXyz_size[0] == 1) {
+              // 'SmartLoaderEstiamteLocations:155' [pcFirstDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, pcFirstXyz(1,:)); 
+              CalcPlaneToPointDistance(configParams->planeModelParameters,
+                *(float (*)[3])&SD->u6.f20.pcFirstXyz_data[0],
+                &pcFirstDistanceToPlane, &empty_non_axis_sizes);
 
-              // 'SmartLoaderEstiamteLocations:511' shovelToLoader2DVec = shovelToLoader2DVec / norm(shovelToLoader2DVec); 
-              d5 = c_norm(p4);
-
-              // 'SmartLoaderEstiamteLocations:512' if dot(largestEigenVec, shovelToLoader2DVec) < 0 
-              b_V[0] = V[input_sizes[1] - 1];
-              p4[0] = (smartLoaderStruct->shovelLoc[0] -
-                       smartLoaderStruct->loaderLoc[0]) / d5;
-              b_V[1] = V[input_sizes[1] + 1];
-              p4[1] = (smartLoaderStruct->shovelLoc[1] -
-                       smartLoaderStruct->loaderLoc[1]) / d5;
-              if ((dot(b_V, p4)).re < 0.0) {
-                // 'SmartLoaderEstiamteLocations:513' largestEigenVec = largestEigenVec * -1; 
-                largestEigenVec[0].re = -V[input_sizes[1] - 1].re;
-                largestEigenVec[1].re = -V[input_sizes[1] + 1].re;
+              // 'SmartLoaderEstiamteLocations:155' ~
+            } else {
+              // 'SmartLoaderEstiamteLocations:156' else
+              // 'SmartLoaderEstiamteLocations:157' [~, I] = sort(pcFirstXyz(:,3)); 
+              x_size[0] = pcFirstXyz_size[0];
+              loop_ub = pcFirstXyz_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                SD->u6.f20.x_data[i46] = SD->u6.f20.pcFirstXyz_data[2 + 3 * i46];
               }
 
-              // 'SmartLoaderEstiamteLocations:515' smartLoaderStruct.loaderYawAngleDeg = atan2d(real(largestEigenVec(2,1)),real(largestEigenVec(1,1))); 
-              smartLoaderStruct->loaderYawAngleDeg = 57.295779513082323 * atan2
-                (largestEigenVec[1].re, largestEigenVec[0].re);
+              sort(SD->u6.f20.x_data, x_size, SD->u6.f20.iidx_data,
+                   kmeansIdx_size);
 
-              // 'SmartLoaderEstiamteLocations:516' smartLoaderStruct.loaderYawAngleStatus = true; 
-              smartLoaderStruct->loaderYawAngleStatus = true;
+              // 'SmartLoaderEstiamteLocations:157' ~
+              // 'SmartLoaderEstiamteLocations:158' zMedianPointFirst = pcFirstXyz(floor(size(I,1)/2),:); 
+              // 'SmartLoaderEstiamteLocations:159' [pcFirstDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, zMedianPointFirst); 
+              CalcPlaneToPointDistance(configParams->planeModelParameters,
+                *(float (*)[3])&SD->u6.f20.pcFirstXyz_data[3 * ((int)std::floor
+                ((double)kmeansIdx_size[0] / 2.0) - 1)], &pcFirstDistanceToPlane,
+                &empty_non_axis_sizes);
 
-              // 'SmartLoaderEstiamteLocations:518' if false
-              // 'SmartLoaderEstiamteLocations:530' if false
-              //  From these two angles calculate the loader to shovel angle
-              // 'SmartLoaderEstiamteLocations:545' loaderToShovel2Dvec = smartLoaderStruct.shovelLoc(1:2) - smartLoaderStruct.loaderLoc(1:2); 
-              p4[0] = smartLoaderStruct->shovelLoc[0] -
-                smartLoaderStruct->loaderLoc[0];
-              p4[1] = smartLoaderStruct->shovelLoc[1] -
-                smartLoaderStruct->loaderLoc[1];
-
-              // 'SmartLoaderEstiamteLocations:546' loaderToShovel2Dvec = loaderToShovel2Dvec / norm(loaderToShovel2Dvec); 
-              d5 = c_norm(p4);
-              p4[0] = (smartLoaderStruct->shovelLoc[0] -
-                       smartLoaderStruct->loaderLoc[0]) / d5;
-              p4[1] = (smartLoaderStruct->shovelLoc[1] -
-                       smartLoaderStruct->loaderLoc[1]) / d5;
-
-              // 'SmartLoaderEstiamteLocations:547' loader2Dvec = ([1 0] * [cosd(smartLoaderStruct.loaderYawAngleDeg) sind(smartLoaderStruct.loaderYawAngleDeg); -sind(smartLoaderStruct.loaderYawAngleDeg) cosd(smartLoaderStruct.loaderYawAngleDeg)])'; 
-              d5 = smartLoaderStruct->loaderYawAngleDeg;
-              b_cosd(&d5);
-              d6 = smartLoaderStruct->loaderYawAngleDeg;
-              b_sind(&d6);
-              v_idx_0 = smartLoaderStruct->loaderYawAngleDeg;
-              b_sind(&v_idx_0);
-              v_idx_0 = smartLoaderStruct->loaderYawAngleDeg;
-              b_cosd(&v_idx_0);
-
-              //  there is no need to normalize the loader2Dvec vector becuase rotation matrix is orthonormalize 
-              //  This equations relate to right hand coordinate system
-              // 'SmartLoaderEstiamteLocations:551' tempDot = loaderToShovel2Dvec(1)*loader2Dvec(1) + loaderToShovel2Dvec(2)*loader2Dvec(2); 
-              // 'SmartLoaderEstiamteLocations:552' tempDet = loaderToShovel2Dvec(2)*loader2Dvec(1) - loaderToShovel2Dvec(1)*loader2Dvec(2); 
-              // 'SmartLoaderEstiamteLocations:553' smartLoaderStruct.loaderToShovelYawAngleDeg = atan2d(tempDet, tempDot); 
-              smartLoaderStruct->loaderToShovelYawAngleDeg = 57.295779513082323 *
-                atan2(p4[1] * d5 - p4[0] * d6, p4[0] * d5 + p4[1] * d6);
-
-              // 'SmartLoaderEstiamteLocations:554' smartLoaderStruct.loaderToShovelYawAngleDegStatus = true; 
-              smartLoaderStruct->loaderToShovelYawAngleDegStatus = true;
+              // 'SmartLoaderEstiamteLocations:159' ~
             }
 
-            //  Determine the bounding box of the loader
-            // 'SmartLoaderEstiamteLocations:559' if coder.target('Matlab') && false 
+            // 'SmartLoaderEstiamteLocations:162' if size(pcSecondXyz,1) == 1
+            if (input_sizes[0] == 1) {
+              // 'SmartLoaderEstiamteLocations:163' [pcSecondDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, pcSecondXyz(1,:)); 
+              CalcPlaneToPointDistance(configParams->planeModelParameters,
+                *(float (*)[3])&SD->u6.f20.pcSecondXyz_data[0],
+                &pcSecondDistanceToPlane, &empty_non_axis_sizes);
+
+              // 'SmartLoaderEstiamteLocations:163' ~
+            } else {
+              // 'SmartLoaderEstiamteLocations:164' else
+              // 'SmartLoaderEstiamteLocations:165' [~, I] = sort(pcSecondXyz(:,3)); 
+              x_size[0] = input_sizes[0];
+              loop_ub = input_sizes[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                SD->u6.f20.x_data[i46] = SD->u6.f20.pcSecondXyz_data[2 + 3 * i46];
+              }
+
+              sort(SD->u6.f20.x_data, x_size, SD->u6.f20.iidx_data,
+                   kmeansIdx_size);
+
+              // 'SmartLoaderEstiamteLocations:165' ~
+              // 'SmartLoaderEstiamteLocations:166' zMedianPointSecond = pcSecondXyz(floor(size(I,1)/2),:); 
+              // 'SmartLoaderEstiamteLocations:167' [pcSecondDistanceToPlane, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, zMedianPointSecond); 
+              CalcPlaneToPointDistance(configParams->planeModelParameters,
+                *(float (*)[3])&SD->u6.f20.pcSecondXyz_data[3 * ((int)std::floor
+                ((double)kmeansIdx_size[0] / 2.0) - 1)],
+                &pcSecondDistanceToPlane, &empty_non_axis_sizes);
+
+              // 'SmartLoaderEstiamteLocations:167' ~
+            }
+
+            // 'SmartLoaderEstiamteLocations:171' if pcFirstDistanceToPlane > configParams.minimumDistanceFromLoaderToPlaneMeter &&... 
+            // 'SmartLoaderEstiamteLocations:172'                 pcSecondDistanceToPlane < configParams.minimumDistanceFromLoaderToPlaneMeter 
+            if ((pcFirstDistanceToPlane >
+                 configParams->minimumDistanceFromLoaderToPlaneMeter) &&
+                (pcSecondDistanceToPlane <
+                 configParams->minimumDistanceFromLoaderToPlaneMeter)) {
+              // 'SmartLoaderEstiamteLocations:173' ptCloudLoaderReflectorsXyz = pcFirstXyz; 
+              ptCloudSenceReflectorsXyz_size[0] = pcFirstXyz_size[0];
+              if (0 <= partialTrueCount - 1) {
+                memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
+                       &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
+                       (partialTrueCount * (int)sizeof(float)));
+              }
+
+              // 'SmartLoaderEstiamteLocations:173' ptCloudShovelReflectorsXyz = pcSecondXyz; 
+              ptCloudShovelReflectorsXyz_size[1] = 3;
+              ptCloudShovelReflectorsXyz_size[0] = input_sizes[0];
+              if (0 <= m - 1) {
+                memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
+                       &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
+                        sizeof(float)));
+              }
+
+              // 'SmartLoaderEstiamteLocations:174' isFoundLoaderPc = true;
+              isFoundLoaderPc = true;
+            } else {
+              if ((pcFirstDistanceToPlane <
+                   configParams->minimumDistanceFromLoaderToPlaneMeter) &&
+                  (pcSecondDistanceToPlane >
+                   configParams->minimumDistanceFromLoaderToPlaneMeter)) {
+                // 'SmartLoaderEstiamteLocations:176' elseif pcFirstDistanceToPlane < configParams.minimumDistanceFromLoaderToPlaneMeter &&... 
+                // 'SmartLoaderEstiamteLocations:177'                 pcSecondDistanceToPlane > configParams.minimumDistanceFromLoaderToPlaneMeter 
+                // 'SmartLoaderEstiamteLocations:178' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
+                ptCloudSenceReflectorsXyz_size[0] = input_sizes[0];
+                if (0 <= m - 1) {
+                  memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
+                         &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m *
+                          (int)sizeof(float)));
+                }
+
+                // 'SmartLoaderEstiamteLocations:178' ptCloudShovelReflectorsXyz = pcFirstXyz; 
+                ptCloudShovelReflectorsXyz_size[1] = 3;
+                ptCloudShovelReflectorsXyz_size[0] = pcFirstXyz_size[0];
+                if (0 <= partialTrueCount - 1) {
+                  memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
+                         &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
+                         (partialTrueCount * (int)sizeof(float)));
+                }
+
+                // 'SmartLoaderEstiamteLocations:179' isFoundLoaderPc = true;
+                isFoundLoaderPc = true;
+              }
+            }
           }
+
+          // 'SmartLoaderEstiamteLocations:184' if ~isFoundLoaderPc
+          // 'SmartLoaderEstiamteLocations:193' if ~isFoundLoaderPc
+          if (!isFoundLoaderPc) {
+            //  Third stradegy - determine the range for both clusters, the loader reflector suppose to be circle shaped 
+            //  and the shovel reflector supposes to be much more rectangular shaped 
+            // 'SmartLoaderEstiamteLocations:196' pcFirstMinorToMajorRation = min(pcFirstRange(1:2)) / max(pcFirstRange(1:2)); 
+            // 'SmartLoaderEstiamteLocations:197' pcSecondMinorToMajorRation = min(pcSecondRange(1:2)) / max(pcSecondRange(1:2)); 
+            //  TODO : add a limit to the differenct between pcFirstMinorToMajorRation to pcSecondMinorToMajorRation 
+            // 'SmartLoaderEstiamteLocations:200' if pcSecondMinorToMajorRation < pcFirstMinorToMajorRation 
+            if (pcSecondRange_idx_0 > pcSecondRange_idx_1) {
+              b_pcSecondRange_idx_0 = pcSecondRange_idx_1;
+            } else {
+              b_pcSecondRange_idx_0 = pcSecondRange_idx_0;
+            }
+
+            if (pcSecondRange_idx_0 < pcSecondRange_idx_1) {
+              c_pcSecondRange_idx_0 = pcSecondRange_idx_1;
+            } else {
+              c_pcSecondRange_idx_0 = pcSecondRange_idx_0;
+            }
+
+            if (pcFirstRange_idx_0 > pcFirstRange_idx_1) {
+              b_pcFirstRange_idx_0 = pcFirstRange_idx_1;
+            } else {
+              b_pcFirstRange_idx_0 = pcFirstRange_idx_0;
+            }
+
+            if (pcFirstRange_idx_0 < pcFirstRange_idx_1) {
+              c_pcFirstRange_idx_0 = pcFirstRange_idx_1;
+            } else {
+              c_pcFirstRange_idx_0 = pcFirstRange_idx_0;
+            }
+
+            if (b_pcSecondRange_idx_0 / c_pcSecondRange_idx_0 <
+                b_pcFirstRange_idx_0 / c_pcFirstRange_idx_0) {
+              // 'SmartLoaderEstiamteLocations:201' ptCloudLoaderReflectorsXyz = pcFirstXyz; 
+              ptCloudSenceReflectorsXyz_size[0] = pcFirstXyz_size[0];
+              if (0 <= partialTrueCount - 1) {
+                memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
+                       &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
+                       (partialTrueCount * (int)sizeof(float)));
+              }
+
+              // 'SmartLoaderEstiamteLocations:201' ptCloudShovelReflectorsXyz = pcSecondXyz; 
+              ptCloudShovelReflectorsXyz_size[1] = 3;
+              ptCloudShovelReflectorsXyz_size[0] = input_sizes[0];
+              if (0 <= m - 1) {
+                memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
+                       &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
+                        sizeof(float)));
+              }
+            } else {
+              // 'SmartLoaderEstiamteLocations:202' else
+              // 'SmartLoaderEstiamteLocations:203' ptCloudLoaderReflectorsXyz = pcSecondXyz; 
+              ptCloudSenceReflectorsXyz_size[0] = input_sizes[0];
+              if (0 <= m - 1) {
+                memcpy(&SD->u6.f20.ptCloudSenceReflectorsXyz_data[0],
+                       &SD->u6.f20.pcSecondXyz_data[0], (unsigned int)(m * (int)
+                        sizeof(float)));
+              }
+
+              // 'SmartLoaderEstiamteLocations:203' ptCloudShovelReflectorsXyz = pcFirstXyz; 
+              ptCloudShovelReflectorsXyz_size[1] = 3;
+              ptCloudShovelReflectorsXyz_size[0] = pcFirstXyz_size[0];
+              if (0 <= partialTrueCount - 1) {
+                memcpy(&SD->u6.f20.ptCloudShovelReflectorsXyz_data[0],
+                       &SD->u6.f20.pcFirstXyz_data[0], (unsigned int)
+                       (partialTrueCount * (int)sizeof(float)));
+              }
+            }
+          }
+
+          //  figure, PlotPointCloud(ptCloudLoaderReflectorsXyz);
+          //  figure, PlotPointCloud(ptCloudShovelReflectorsXyz);
+          //     %% Estimate the shovel loc
+          // 'SmartLoaderEstiamteLocations:211' if size(ptCloudShovelReflectorsXyz,1) >= configParams.minPointsForReflector 
+          if (ptCloudShovelReflectorsXyz_size[0] >=
+              configParams->minPointsForReflector) {
+            // 'SmartLoaderEstiamteLocations:212' smartLoaderStruct.shovelLoc = double(mean(ptCloudShovelReflectorsXyz)'); 
+            mean(SD->u6.f20.ptCloudShovelReflectorsXyz_data,
+                 ptCloudShovelReflectorsXyz_size, b_kmeansC);
+            smartLoaderStruct->shovelLoc[0] = b_kmeansC[0];
+            smartLoaderStruct->shovelLoc[1] = b_kmeansC[1];
+            smartLoaderStruct->shovelLoc[2] = b_kmeansC[2];
+
+            // 'SmartLoaderEstiamteLocations:213' smartLoaderStruct.shovelLocStatus = true; 
+            smartLoaderStruct->shovelLocStatus = true;
+          }
+
+          guard1 = true;
         }
       }
-    } else {
-      // 'SmartLoaderEstiamteLocations:256' if coder.target('Matlab')
-    }
 
-    emxFree_cell_wrap_3_64x1(&r2);
-    emxFree_cell_wrap_3_64x1(&clustersXs);
+      if (guard1) {
+        //  Remove outliers points in the loader point cloud. these points z's coordinate difference is larger than the following threshold 
+        //  Remove points which are outliers in the z axis
+        //  figure, PlotPointCloud(ptCloudLoaderReflectors);
+        // 'SmartLoaderEstiamteLocations:220' zCor = ptCloudLoaderReflectorsXyz(:,3); 
+        loop_ub = ptCloudSenceReflectorsXyz_size[0];
+        for (i46 = 0; i46 < loop_ub; i46++) {
+          SD->u6.f20.tmp_data[i46] = SD->u6.f20.ptCloudSenceReflectorsXyz_data[2
+            + 3 * i46];
+        }
+
+        // 'SmartLoaderEstiamteLocations:221' zMedian = median(zCor);
+        iv1[0] = ptCloudSenceReflectorsXyz_size[0];
+        pcFirstRange_idx_0 = median(SD, SD->u6.f20.tmp_data, iv1);
+
+        // 'SmartLoaderEstiamteLocations:222' assert(numel(zMedian) == 1);
+        // 'SmartLoaderEstiamteLocations:223' loaderReflectorPtrInd = abs(zCor - zMedian) <= configParams.loaderReflectorMaxZaxisDistanceForOutlierMeter; 
+        loop_ub = ptCloudSenceReflectorsXyz_size[0];
+        tmp_size[0] = ptCloudSenceReflectorsXyz_size[0];
+        for (i46 = 0; i46 < loop_ub; i46++) {
+          SD->u6.f20.c_tmp_data[i46] = SD->u6.f20.tmp_data[i46] -
+            pcFirstRange_idx_0;
+        }
+
+        b_abs(SD->u6.f20.c_tmp_data, tmp_size, SD->u6.f20.x_data, x_size);
+        loop_ub = x_size[0];
+        for (i46 = 0; i46 < loop_ub; i46++) {
+          SD->u6.f20.ptCloudSenceReflectorsInd_data[i46] = (SD->
+            u6.f20.x_data[i46] <=
+            configParams->loaderReflectorMaxZaxisDistanceForOutlierMeter);
+        }
+
+        //  sum(loaderReflectorPtrInd)
+        // ptCloudLoaderReflectorsFilterd = select(ptCloudLoaderReflectors, find(loaderReflectorPtrInd)); 
+        // 'SmartLoaderEstiamteLocations:226' ptCloudLoaderReflectorsFilterdXyz = ptCloudLoaderReflectorsXyz(loaderReflectorPtrInd,:); 
+        //  figure, PlotPointCloud(ptCloudLoaderReflectorsXyz);
+        //  figure, PlotPointCloud(ptCloudLoaderReflectorsFilterdXyz);
+        //  Determine the number of lines, determine the cluster of lines.
+        //  Determine Find the number of lines
+        // 'SmartLoaderEstiamteLocations:233' coder.varsize('ptr', [SmartLoaderCompilationConstants.MaxPointCloudSize 3], [1 0]); 
+        // 'SmartLoaderEstiamteLocations:235' if coder.target('Matlab') && false 
+        // 'SmartLoaderEstiamteLocations:247' else
+        //  Cluster in 2D
+        // 'SmartLoaderEstiamteLocations:249' coder.varsize('clustersYs', 'clustersXs', [1 64], [0 1]); 
+        // 'SmartLoaderEstiamteLocations:250' [clustersXs, clustersYs, status] = ClusterPoints2D(ptCloudLoaderReflectorsFilterdXyz(:,1:2), configParams.maxDistanceBetweenEachRayMeter); 
+        m = x_size[0] - 1;
+        trueCount = 0;
+        for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+          if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
+            trueCount++;
+          }
+        }
+
+        partialTrueCount = 0;
+        for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+          if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
+            SD->u6.f20.d_tmp_data[partialTrueCount] = loop_ub + 1;
+            partialTrueCount++;
+          }
+        }
+
+        for (i46 = 0; i46 < trueCount; i46++) {
+          m = 3 * (SD->u6.f20.d_tmp_data[i46] - 1);
+          SD->u6.f20.pcSecondXyz_data[3 * i46] =
+            SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
+          SD->u6.f20.pcSecondXyz_data[1 + 3 * i46] =
+            SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
+          SD->u6.f20.pcSecondXyz_data[2 + 3 * i46] =
+            SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
+        }
+
+        c_ptCloudSenceReflectorsXyz_size[1] = 2;
+        c_ptCloudSenceReflectorsXyz_size[0] = trueCount;
+        for (i46 = 0; i46 < trueCount; i46++) {
+          m = i46 << 1;
+          SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
+            SD->u6.f20.pcSecondXyz_data[3 * i46];
+          SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
+            SD->u6.f20.pcSecondXyz_data[1 + 3 * i46];
+        }
+
+        ClusterPoints2D(SD, SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
+                        c_ptCloudSenceReflectorsXyz_size,
+                        configParams->maxDistanceBetweenEachRayMeter,
+                        clustersXs.data, clustersXs.size, clustersYs.data,
+                        clustersYs.size, &empty_non_axis_sizes);
+
+        // 'SmartLoaderEstiamteLocations:251' if isempty(clustersXs) || ~status
+        if (empty_non_axis_sizes) {
+          //  remove small clusters with less than 3 points
+          // 'SmartLoaderEstiamteLocations:259' minimumNumPointsInCluster = 3;
+          //  cellfun doens't works with matlab coder
+          //  Previous code: clustersXs(cellfun('length',clustersXs)<minimumNumPointsInCluster) = []; 
+          //  Previous code: clustersYs(cellfun('length',clustersYs)<minimumNumPointsInCluster) = []; 
+          //  In order to solve this issue - I have coded the filter function by my own 
+          // 'SmartLoaderEstiamteLocations:265' isInvalid = zeros(1,size(clustersXs,2),'logical'); 
+          // 'SmartLoaderEstiamteLocations:266' for i = 1:size(clustersXs,2)
+          for (loop_ub = 0; loop_ub < 64; loop_ub++) {
+            isInvalid_data[loop_ub] = false;
+
+            // 'SmartLoaderEstiamteLocations:267' if size(clustersXs{i},1) < minimumNumPointsInCluster 
+            if (clustersXs.data[loop_ub].f1->size[0] < 3) {
+              // 'SmartLoaderEstiamteLocations:268' isInvalid(i) = true;
+              isInvalid_data[loop_ub] = true;
+            }
+          }
+
+          // 'SmartLoaderEstiamteLocations:271' clustersXs(isInvalid) = [];
+          nullAssignment(clustersXs.data, isInvalid_data, r2.data, r2.size);
+
+          // 'SmartLoaderEstiamteLocations:272' clustersYs(isInvalid) = [];
+          nullAssignment(clustersYs.data, isInvalid_data, clustersXs.data,
+                         clustersXs.size);
+
+          // 'SmartLoaderEstiamteLocations:275' if isempty(clustersXs)
+          if (r2.size[1] == 0) {
+            // 'SmartLoaderEstiamteLocations:276' if coder.target('Matlab')
+            // 'SmartLoaderEstiamteLocations:279' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailed; 
+            smartLoaderStruct->status = PerceptionSmartLoaderReturnValue_eFailed;
+          } else {
+            // 'SmartLoaderEstiamteLocations:282' if numel(clustersXs) == 1
+            if (r2.size[1] == 1) {
+              // 'SmartLoaderEstiamteLocations:283' if coder.target('Matlab')
+              // 'SmartLoaderEstiamteLocations:286' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailed; 
+              smartLoaderStruct->status =
+                PerceptionSmartLoaderReturnValue_eFailed;
+            } else {
+              // 'SmartLoaderEstiamteLocations:290' if coder.target('Matlab') && false 
+              //     %% Get the extreme points for each cluster - these points will be use for circle center estimation 
+              // 'SmartLoaderEstiamteLocations:303' coder.varsize('extremePoints', [SmartLoaderCompilationConstants.MaxNumClusters 2], [1 0]); 
+              // 'SmartLoaderEstiamteLocations:305' extremePoints = zeros(0,2,'like', ptCloudLoaderReflectorsFilterdXyz); 
+              extremePoints_size[1] = 2;
+              extremePoints_size[0] = 0;
+
+              // 'SmartLoaderEstiamteLocations:306' for q = 1:numel(clustersXs)
+              i46 = r2.size[1];
+              for (q = 0; q < i46; q++) {
+                // 'SmartLoaderEstiamteLocations:307' pdistOutput = pdist([clustersXs{q} clustersYs{q}]); 
+                if ((r2.data[q].f1->size[0] != 0) && (r2.data[q].f1->size[1] !=
+                     0)) {
+                  m = r2.data[q].f1->size[0];
+                } else if ((clustersXs.data[q].f1->size[0] != 0) &&
+                           (clustersXs.data[q].f1->size[1] != 0)) {
+                  m = clustersXs.data[q].f1->size[0];
+                } else {
+                  m = r2.data[q].f1->size[0];
+                  if (m <= 0) {
+                    m = 0;
+                  }
+
+                  if (clustersXs.data[q].f1->size[0] > m) {
+                    m = clustersXs.data[q].f1->size[0];
+                  }
+                }
+
+                empty_non_axis_sizes = (m == 0);
+                if (empty_non_axis_sizes || ((r2.data[q].f1->size[0] != 0) &&
+                     (r2.data[q].f1->size[1] != 0))) {
+                  partialTrueCount = r2.data[q].f1->size[1];
+                } else {
+                  partialTrueCount = 0;
+                }
+
+                if ((partialTrueCount == r2.data[q].f1->size[1]) && (m ==
+                     r2.data[q].f1->size[0])) {
+                  i47 = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
+                  reshapes[0].f1->size[1] = partialTrueCount;
+                  reshapes[0].f1->size[0] = m;
+                  emxEnsureCapacity_real32_T(reshapes[0].f1, i47);
+                  loop_ub = partialTrueCount * m;
+                  for (i47 = 0; i47 < loop_ub; i47++) {
+                    reshapes[0].f1->data[i47] = r2.data[q].f1->data[i47];
+                  }
+                } else {
+                  i47 = 0;
+                  i48 = 0;
+                  trueCount = 0;
+                  i49 = 0;
+                  loop_ub = reshapes[0].f1->size[0] * reshapes[0].f1->size[1];
+                  reshapes[0].f1->size[1] = partialTrueCount;
+                  reshapes[0].f1->size[0] = m;
+                  emxEnsureCapacity_real32_T(reshapes[0].f1, loop_ub);
+                  for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
+                    reshapes[0].f1->data[i48 + reshapes[0].f1->size[1] * i47] =
+                      r2.data[q].f1->data[i49 + r2.data[q].f1->size[1] *
+                      trueCount];
+                    i47++;
+                    trueCount++;
+                    if (i47 > reshapes[0].f1->size[0] - 1) {
+                      i47 = 0;
+                      i48++;
+                    }
+
+                    if (trueCount > r2.data[q].f1->size[0] - 1) {
+                      trueCount = 0;
+                      i49++;
+                    }
+                  }
+                }
+
+                if (empty_non_axis_sizes || ((clustersXs.data[q].f1->size[0] !=
+                      0) && (clustersXs.data[q].f1->size[1] != 0))) {
+                  b_input_sizes = (signed char)clustersXs.data[q].f1->size[1];
+                } else {
+                  b_input_sizes = 0;
+                }
+
+                partialTrueCount = b_input_sizes;
+                if ((b_input_sizes == clustersXs.data[q].f1->size[1]) && (m ==
+                     clustersXs.data[q].f1->size[0])) {
+                  i47 = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
+                  reshapes[1].f1->size[1] = b_input_sizes;
+                  reshapes[1].f1->size[0] = m;
+                  emxEnsureCapacity_real32_T(reshapes[1].f1, i47);
+                  loop_ub = b_input_sizes * m;
+                  for (i47 = 0; i47 < loop_ub; i47++) {
+                    reshapes[1].f1->data[i47] = clustersXs.data[q].f1->data[i47];
+                  }
+                } else {
+                  i47 = 0;
+                  i48 = 0;
+                  trueCount = 0;
+                  i49 = 0;
+                  loop_ub = reshapes[1].f1->size[0] * reshapes[1].f1->size[1];
+                  reshapes[1].f1->size[1] = b_input_sizes;
+                  reshapes[1].f1->size[0] = m;
+                  emxEnsureCapacity_real32_T(reshapes[1].f1, loop_ub);
+                  for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
+                    reshapes[1].f1->data[i48 + reshapes[1].f1->size[1] * i47] =
+                      clustersXs.data[q].f1->data[i49 + clustersXs.data[q]
+                      .f1->size[1] * trueCount];
+                    i47++;
+                    trueCount++;
+                    if (i47 > reshapes[1].f1->size[0] - 1) {
+                      i47 = 0;
+                      i48++;
+                    }
+
+                    if (trueCount > clustersXs.data[q].f1->size[0] - 1) {
+                      trueCount = 0;
+                      i49++;
+                    }
+                  }
+                }
+
+                i47 = d_reshapes->size[0] * d_reshapes->size[1];
+                d_reshapes->size[1] = reshapes[0].f1->size[1] + reshapes[1]
+                  .f1->size[1];
+                d_reshapes->size[0] = reshapes[0].f1->size[0];
+                emxEnsureCapacity_real32_T(d_reshapes, i47);
+                loop_ub = reshapes[0].f1->size[0];
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  partialTrueCount = reshapes[0].f1->size[1];
+                  for (i48 = 0; i48 < partialTrueCount; i48++) {
+                    d_reshapes->data[i48 + d_reshapes->size[1] * i47] =
+                      reshapes[0].f1->data[i48 + reshapes[0].f1->size[1] * i47];
+                  }
+                }
+
+                loop_ub = reshapes[1].f1->size[0];
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  partialTrueCount = reshapes[1].f1->size[1];
+                  for (i48 = 0; i48 < partialTrueCount; i48++) {
+                    d_reshapes->data[(i48 + reshapes[0].f1->size[1]) +
+                      d_reshapes->size[1] * i47] = reshapes[1].f1->data[i48 +
+                      reshapes[1].f1->size[1] * i47];
+                  }
+                }
+
+                pdist(d_reshapes, pdistOutput);
+
+                // 'SmartLoaderEstiamteLocations:308' Z = squareform(pdistOutput); 
+                squareform(pdistOutput, Z);
+
+                //  Find the cooridnate of the most distanced points
+                // 'SmartLoaderEstiamteLocations:310' [~, maxInd] = max(Z(:));
+                m = Z->size[0] * Z->size[1];
+                i47 = 0;
+                i48 = 0;
+                trueCount = 0;
+                i49 = varargin_1->size[0];
+                varargin_1->size[0] = m;
+                emxEnsureCapacity_real32_T(varargin_1, i49);
+                for (i49 = 0; i49 < m; i49++) {
+                  varargin_1->data[i47] = Z->data[trueCount + Z->size[1] * i48];
+                  i47++;
+                  i48++;
+                  if (i48 > Z->size[0] - 1) {
+                    i48 = 0;
+                    trueCount++;
+                  }
+                }
+
+                m = varargin_1->size[0];
+                if (varargin_1->size[0] <= 2) {
+                  if (varargin_1->size[0] == 1) {
+                    loop_ub = 0;
+                  } else {
+                    loop_ub = (varargin_1->data[0] < varargin_1->data[1]);
+                  }
+                } else {
+                  pcFirstDistanceToPlane = varargin_1->data[0];
+                  loop_ub = 0;
+                  for (partialTrueCount = 2; partialTrueCount <= m;
+                       partialTrueCount++) {
+                    if (pcFirstDistanceToPlane < varargin_1->
+                        data[partialTrueCount - 1]) {
+                      pcFirstDistanceToPlane = varargin_1->data[partialTrueCount
+                        - 1];
+                      loop_ub = partialTrueCount - 1;
+                    }
+                  }
+                }
+
+                // 'SmartLoaderEstiamteLocations:310' ~
+                // 'SmartLoaderEstiamteLocations:312' [row,col] = ind2sub(size(Z), maxInd); 
+                singleReflectorRangeLimitMeter = Z->size[0];
+                m = (int)(unsigned int)singleReflectorRangeLimitMeter;
+                vk = loop_ub / m;
+                m = loop_ub - vk * m;
+
+                // 'SmartLoaderEstiamteLocations:314' tempXs = [clustersXs{q}(row,:) clustersYs{q}(row,:)]; 
+                loop_ub = r2.data[q].f1->size[1];
+                partialTrueCount = clustersXs.data[q].f1->size[1];
+                tempXs_size = loop_ub + partialTrueCount;
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  tempXs_data[i47] = r2.data[q].f1->data[i47 + r2.data[q]
+                    .f1->size[1] * m];
+                }
+
+                for (i47 = 0; i47 < partialTrueCount; i47++) {
+                  tempXs_data[i47 + loop_ub] = clustersXs.data[q].f1->data[i47 +
+                    clustersXs.data[q].f1->size[1] * m];
+                }
+
+                // 'SmartLoaderEstiamteLocations:315' extremePoints = [extremePoints; tempXs]; 
+                if (extremePoints_size[0] != 0) {
+                  sizes = 2;
+                } else if (tempXs_size != 0) {
+                  sizes = (signed char)tempXs_size;
+                } else {
+                  sizes = 2;
+                }
+
+                if (extremePoints_size[0] != 0) {
+                  b_input_sizes = (signed char)extremePoints_size[0];
+                } else {
+                  b_input_sizes = 0;
+                }
+
+                m = b_input_sizes;
+                partialTrueCount = sizes;
+                if ((sizes == 2) && (b_input_sizes == extremePoints_size[0])) {
+                  i47 = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
+                  b_reshapes[0].f1->size[1] = 2;
+                  b_reshapes[0].f1->size[0] = b_input_sizes;
+                  emxEnsureCapacity_real32_T(b_reshapes[0].f1, i47);
+                  loop_ub = 2 * b_input_sizes;
+                  for (i47 = 0; i47 < loop_ub; i47++) {
+                    b_reshapes[0].f1->data[i47] = extremePoints_data[i47];
+                  }
+                } else {
+                  i47 = 0;
+                  i48 = 0;
+                  trueCount = 0;
+                  i49 = 0;
+                  loop_ub = b_reshapes[0].f1->size[0] * b_reshapes[0].f1->size[1];
+                  b_reshapes[0].f1->size[1] = sizes;
+                  b_reshapes[0].f1->size[0] = b_input_sizes;
+                  emxEnsureCapacity_real32_T(b_reshapes[0].f1, loop_ub);
+                  for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
+                    b_reshapes[0].f1->data[i48 + b_reshapes[0].f1->size[1] * i47]
+                      = extremePoints_data[i49 + (trueCount << 1)];
+                    i47++;
+                    trueCount++;
+                    if (i47 > b_reshapes[0].f1->size[0] - 1) {
+                      i47 = 0;
+                      i48++;
+                    }
+
+                    if (trueCount > extremePoints_size[0] - 1) {
+                      trueCount = 0;
+                      i49++;
+                    }
+                  }
+                }
+
+                b_input_sizes = (signed char)(tempXs_size != 0);
+                m = b_input_sizes;
+                partialTrueCount = sizes;
+                if ((sizes == tempXs_size) && (b_input_sizes == 1)) {
+                  i47 = b_reshapes[1].f1->size[0] * b_reshapes[1].f1->size[1];
+                  b_reshapes[1].f1->size[1] = sizes;
+                  b_reshapes[1].f1->size[0] = 1;
+                  emxEnsureCapacity_real32_T(b_reshapes[1].f1, i47);
+                  loop_ub = sizes;
+                  for (i47 = 0; i47 < loop_ub; i47++) {
+                    b_reshapes[1].f1->data[i47] = tempXs_data[i47];
+                  }
+                } else {
+                  i47 = 0;
+                  i48 = 0;
+                  trueCount = 0;
+                  i49 = b_reshapes[1].f1->size[0] * b_reshapes[1].f1->size[1];
+                  b_reshapes[1].f1->size[1] = sizes;
+                  b_reshapes[1].f1->size[0] = b_input_sizes;
+                  emxEnsureCapacity_real32_T(b_reshapes[1].f1, i49);
+                  for (i49 = 0; i49 < m * partialTrueCount; i49++) {
+                    b_reshapes[1].f1->data[i48 + b_reshapes[1].f1->size[1] * i47]
+                      = tempXs_data[trueCount];
+                    i47++;
+                    if (i47 > b_reshapes[1].f1->size[0] - 1) {
+                      i47 = 0;
+                      i48++;
+                    }
+
+                    trueCount++;
+                  }
+                }
+
+                extremePoints_size_idx_1 = b_reshapes[0].f1->size[1];
+                extremePoints_size_idx_0 = b_reshapes[0].f1->size[0] +
+                  b_reshapes[1].f1->size[0];
+                loop_ub = b_reshapes[0].f1->size[0];
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  partialTrueCount = b_reshapes[0].f1->size[1];
+                  for (i48 = 0; i48 < partialTrueCount; i48++) {
+                    b_extremePoints_data[i48 + extremePoints_size_idx_1 * i47] =
+                      b_reshapes[0].f1->data[i48 + b_reshapes[0].f1->size[1] *
+                      i47];
+                  }
+                }
+
+                loop_ub = b_reshapes[1].f1->size[0];
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  partialTrueCount = b_reshapes[1].f1->size[1];
+                  for (i48 = 0; i48 < partialTrueCount; i48++) {
+                    b_extremePoints_data[i48 + extremePoints_size_idx_1 * (i47 +
+                      b_reshapes[0].f1->size[0])] = b_reshapes[1].f1->data[i48 +
+                      b_reshapes[1].f1->size[1] * i47];
+                  }
+                }
+
+                // 'SmartLoaderEstiamteLocations:317' tempYs = [clustersXs{q}(col,:) clustersYs{q}(col,:)]; 
+                loop_ub = r2.data[q].f1->size[1];
+                partialTrueCount = clustersXs.data[q].f1->size[1];
+                tempXs_size = loop_ub + partialTrueCount;
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  tempXs_data[i47] = r2.data[q].f1->data[i47 + r2.data[q]
+                    .f1->size[1] * vk];
+                }
+
+                for (i47 = 0; i47 < partialTrueCount; i47++) {
+                  tempXs_data[i47 + loop_ub] = clustersXs.data[q].f1->data[i47 +
+                    clustersXs.data[q].f1->size[1] * vk];
+                }
+
+                // 'SmartLoaderEstiamteLocations:318' extremePoints = [extremePoints; tempYs]; 
+                if (extremePoints_size_idx_0 != 0) {
+                  sizes = 2;
+                } else if (tempXs_size != 0) {
+                  sizes = (signed char)tempXs_size;
+                } else {
+                  sizes = 2;
+                }
+
+                if (extremePoints_size_idx_0 != 0) {
+                  b_input_sizes = (signed char)extremePoints_size_idx_0;
+                } else {
+                  b_input_sizes = 0;
+                }
+
+                m = b_input_sizes;
+                partialTrueCount = sizes;
+                if ((sizes == 2) && (b_input_sizes == extremePoints_size_idx_0))
+                {
+                  i47 = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
+                  c_reshapes[0].f1->size[1] = 2;
+                  c_reshapes[0].f1->size[0] = b_input_sizes;
+                  emxEnsureCapacity_real32_T(c_reshapes[0].f1, i47);
+                  loop_ub = 2 * b_input_sizes;
+                  for (i47 = 0; i47 < loop_ub; i47++) {
+                    c_reshapes[0].f1->data[i47] = b_extremePoints_data[i47];
+                  }
+                } else {
+                  i47 = 0;
+                  i48 = 0;
+                  trueCount = 0;
+                  i49 = 0;
+                  loop_ub = c_reshapes[0].f1->size[0] * c_reshapes[0].f1->size[1];
+                  c_reshapes[0].f1->size[1] = sizes;
+                  c_reshapes[0].f1->size[0] = b_input_sizes;
+                  emxEnsureCapacity_real32_T(c_reshapes[0].f1, loop_ub);
+                  for (loop_ub = 0; loop_ub < m * partialTrueCount; loop_ub++) {
+                    c_reshapes[0].f1->data[i48 + c_reshapes[0].f1->size[1] * i47]
+                      = b_extremePoints_data[i49 + extremePoints_size_idx_1 *
+                      trueCount];
+                    i47++;
+                    trueCount++;
+                    if (i47 > c_reshapes[0].f1->size[0] - 1) {
+                      i47 = 0;
+                      i48++;
+                    }
+
+                    if (trueCount > extremePoints_size_idx_0 - 1) {
+                      trueCount = 0;
+                      i49++;
+                    }
+                  }
+                }
+
+                b_input_sizes = (signed char)(tempXs_size != 0);
+                m = b_input_sizes;
+                partialTrueCount = sizes;
+                if ((sizes == tempXs_size) && (b_input_sizes == 1)) {
+                  i47 = c_reshapes[1].f1->size[0] * c_reshapes[1].f1->size[1];
+                  c_reshapes[1].f1->size[1] = sizes;
+                  c_reshapes[1].f1->size[0] = 1;
+                  emxEnsureCapacity_real32_T(c_reshapes[1].f1, i47);
+                  loop_ub = sizes;
+                  for (i47 = 0; i47 < loop_ub; i47++) {
+                    c_reshapes[1].f1->data[i47] = tempXs_data[i47];
+                  }
+                } else {
+                  i47 = 0;
+                  i48 = 0;
+                  trueCount = 0;
+                  i49 = c_reshapes[1].f1->size[0] * c_reshapes[1].f1->size[1];
+                  c_reshapes[1].f1->size[1] = sizes;
+                  c_reshapes[1].f1->size[0] = b_input_sizes;
+                  emxEnsureCapacity_real32_T(c_reshapes[1].f1, i49);
+                  for (i49 = 0; i49 < m * partialTrueCount; i49++) {
+                    c_reshapes[1].f1->data[i48 + c_reshapes[1].f1->size[1] * i47]
+                      = tempXs_data[trueCount];
+                    i47++;
+                    if (i47 > c_reshapes[1].f1->size[0] - 1) {
+                      i47 = 0;
+                      i48++;
+                    }
+
+                    trueCount++;
+                  }
+                }
+
+                extremePoints_size[1] = c_reshapes[0].f1->size[1];
+                extremePoints_size[0] = c_reshapes[0].f1->size[0] + c_reshapes[1]
+                  .f1->size[0];
+                loop_ub = c_reshapes[0].f1->size[0];
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  partialTrueCount = c_reshapes[0].f1->size[1];
+                  for (i48 = 0; i48 < partialTrueCount; i48++) {
+                    extremePoints_data[i48 + (i47 << 1)] = c_reshapes[0]
+                      .f1->data[i48 + c_reshapes[0].f1->size[1] * i47];
+                  }
+                }
+
+                loop_ub = c_reshapes[1].f1->size[0];
+                for (i47 = 0; i47 < loop_ub; i47++) {
+                  partialTrueCount = c_reshapes[1].f1->size[1];
+                  for (i48 = 0; i48 < partialTrueCount; i48++) {
+                    extremePoints_data[i48 + ((i47 + c_reshapes[0].f1->size[0]) <<
+                      1)] = c_reshapes[1].f1->data[i48 + c_reshapes[1].f1->size
+                      [1] * i47];
+                  }
+                }
+              }
+
+              // 'SmartLoaderEstiamteLocations:321' if false
+              // 'SmartLoaderEstiamteLocations:337' else
+              //  2nd method - Least squere circle fit - 2nd order development to finite equations 
+              // 'SmartLoaderEstiamteLocations:339' meanXsYs = mean(extremePoints,1); 
+              b_mean(extremePoints_data, extremePoints_size,
+                     distanceToKmeansClusterMeter);
+
+              // 'SmartLoaderEstiamteLocations:340' us = extremePoints(:,1) - meanXsYs(1); 
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                us_data[i46] = extremePoints_data[i46 << 1] -
+                  distanceToKmeansClusterMeter[0];
+              }
+
+              // 'SmartLoaderEstiamteLocations:341' vs = extremePoints(:,2) - meanXsYs(2); 
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                vs_data[i46] = extremePoints_data[1 + (i46 << 1)] -
+                  distanceToKmeansClusterMeter[1];
+              }
+
+              // 'SmartLoaderEstiamteLocations:343' temp_usus = us.*us;
+              temp_usus_size[0] = extremePoints_size[0];
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                temp_usus_data[i46] = us_data[i46] * us_data[i46];
+              }
+
+              // 'SmartLoaderEstiamteLocations:344' s_uu = sum(temp_usus);
+              // 'SmartLoaderEstiamteLocations:345' s_uuu = sum(temp_usus.*us);
+              // 'SmartLoaderEstiamteLocations:346' temp_vsvs = vs.*vs;
+              temp_vsvs_size[0] = extremePoints_size[0];
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                temp_vsvs_data[i46] = vs_data[i46] * vs_data[i46];
+              }
+
+              // 'SmartLoaderEstiamteLocations:347' s_vv = sum(temp_vsvs);
+              // 'SmartLoaderEstiamteLocations:348' s_vvv = sum(vs.*temp_vsvs);
+              // 'SmartLoaderEstiamteLocations:350' temp_vsus = vs.*us;
+              temp_vsus_size[0] = extremePoints_size[0];
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                temp_vsus_data[i46] = vs_data[i46] * us_data[i46];
+              }
+
+              // 'SmartLoaderEstiamteLocations:351' s_vu = sum(temp_vsus);
+              pcFirstDistanceToPlane = c_sum(temp_vsus_data, temp_vsus_size);
+
+              // 'SmartLoaderEstiamteLocations:352' s_uvv = sum(temp_vsus.*vs);
+              // 'SmartLoaderEstiamteLocations:353' s_vuu = sum(temp_vsus.*us);
+              // 'SmartLoaderEstiamteLocations:355' A = [s_uu s_vu; s_vu s_vv];
+              // 'SmartLoaderEstiamteLocations:356' b = 0.5 * [s_uuu + s_uvv; s_vvv + s_vuu]; 
+              // 'SmartLoaderEstiamteLocations:358' cxyEst = inv(A) * b;
+              // 'SmartLoaderEstiamteLocations:359' cxyEst = cxyEst + meanXsYs'; 
+              fv0[0] = c_sum(temp_usus_data, temp_usus_size);
+              fv0[1] = pcFirstDistanceToPlane;
+              fv0[2] = pcFirstDistanceToPlane;
+              fv0[3] = c_sum(temp_vsvs_data, temp_vsvs_size);
+              b_inv(fv0, fv1);
+              b_temp_usus_size[0] = extremePoints_size[0];
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                b_temp_usus_data[i46] = temp_usus_data[i46] * us_data[i46];
+              }
+
+              b_temp_vsus_size[0] = extremePoints_size[0];
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                b_temp_vsus_data[i46] = temp_vsus_data[i46] * vs_data[i46];
+              }
+
+              vs_size[0] = extremePoints_size[0];
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                b_vs_data[i46] = vs_data[i46] * temp_vsvs_data[i46];
+              }
+
+              c_temp_vsus_size[0] = extremePoints_size[0];
+              loop_ub = extremePoints_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                temp_usus_data[i46] = temp_vsus_data[i46] * us_data[i46];
+              }
+
+              pcFirstDistanceToPlane = 0.5F * (c_sum(b_temp_usus_data,
+                b_temp_usus_size) + c_sum(b_temp_vsus_data, b_temp_vsus_size));
+              pcSecondDistanceToPlane = 0.5F * (c_sum(b_vs_data, vs_size) +
+                c_sum(temp_usus_data, c_temp_vsus_size));
+              r[0] = (pcFirstDistanceToPlane * fv1[0] + pcSecondDistanceToPlane *
+                      fv1[1]) + distanceToKmeansClusterMeter[0];
+              r[1] = (pcFirstDistanceToPlane * fv1[2] + pcSecondDistanceToPlane *
+                      fv1[3]) + distanceToKmeansClusterMeter[1];
+
+              // 'SmartLoaderEstiamteLocations:362' if coder.target('Matlab') &&  false 
+              //     %% Calculate the mean squre error for the estiamted model
+              // 'SmartLoaderEstiamteLocations:382' modelErr1 = bsxfun(@minus, extremePoints, cxyEst'); 
+              bsxfun(extremePoints_data, extremePoints_size, r,
+                     SD->u6.f20.kmeansDistanceMat_data, input_sizes);
+              modelErr1_size[0] = input_sizes[0];
+              loop_ub = input_sizes[1] * input_sizes[0];
+              if (0 <= loop_ub - 1) {
+                memcpy(&modelErr1_data[0], &SD->u6.f20.kmeansDistanceMat_data[0],
+                       (unsigned int)(loop_ub * (int)sizeof(float)));
+              }
+
+              // 'SmartLoaderEstiamteLocations:383' modelErr1 = modelErr1 .* modelErr1; 
+              modelErr1_size[1] = 2;
+              loop_ub = (input_sizes[0] << 1) - 1;
+              for (i46 = 0; i46 <= loop_ub; i46++) {
+                modelErr1_data[i46] *= modelErr1_data[i46];
+              }
+
+              // 'SmartLoaderEstiamteLocations:384' modelErr1 = sqrt(sum(modelErr1, 2)) - ((configParams.loaderReflectorDiameterMeter/2)); 
+              b_sum(modelErr1_data, modelErr1_size, SD->u6.f20.x_data, x_size);
+              us_size[0] = x_size[0];
+              if (0 <= x_size[0] - 1) {
+                memcpy(&us_data[0], &SD->u6.f20.x_data[0], (unsigned int)
+                       (x_size[0] * (int)sizeof(float)));
+              }
+
+              b_sqrt(us_data, us_size);
+              v_idx_0 = configParams->loaderReflectorDiameterMeter / 2.0;
+              loop_ub = us_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                us_data[i46] -= (float)v_idx_0;
+              }
+
+              // 'SmartLoaderEstiamteLocations:385' mse = sum(modelErr1 .* modelErr1) / size(extremePoints,1); 
+              // 'SmartLoaderEstiamteLocations:387' if mse > configParams.loaderReflectorDiameterMeter 
+              b_us_size[0] = us_size[0];
+              loop_ub = us_size[0];
+              for (i46 = 0; i46 < loop_ub; i46++) {
+                temp_usus_data[i46] = us_data[i46] * us_data[i46];
+              }
+
+              if (c_sum(temp_usus_data, b_us_size) / (float)extremePoints_size[0]
+                  > configParams->loaderReflectorDiameterMeter) {
+                // 'SmartLoaderEstiamteLocations:388' if coder.target('Matlab')
+                // 'SmartLoaderEstiamteLocations:391' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailedLoaderLocation; 
+                smartLoaderStruct->status =
+                  PerceptionSmartLoaderReturnValue_eFailedLoaderLocation;
+              } else {
+                // 'SmartLoaderEstiamteLocations:395' smartLoaderStruct.loaderLoc = double([cxyEst; zMedian]); 
+                smartLoaderStruct->loaderLoc[0] = r[0];
+                smartLoaderStruct->loaderLoc[1] = r[1];
+                smartLoaderStruct->loaderLoc[2] = pcFirstRange_idx_0;
+
+                //  Ensure minimal distance from the loader location to the ground plane 
+                //  The loader height is around 27cm, we can ensure at least half of this size from the ground plane 
+                // 'SmartLoaderEstiamteLocations:400' [loaderLocToPlaneDistance, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, smartLoaderStruct.loaderLoc'); 
+                b_CalcPlaneToPointDistance(configParams->planeModelParameters,
+                  smartLoaderStruct->loaderLoc, &singleReflectorRangeLimitMeter,
+                  &empty_non_axis_sizes);
+
+                // 'SmartLoaderEstiamteLocations:400' ~
+                // 'SmartLoaderEstiamteLocations:401' if loaderLocToPlaneDistance < configParams.minimumDistanceFromLoaderToPlaneMeter 
+                if (singleReflectorRangeLimitMeter <
+                    configParams->minimumDistanceFromLoaderToPlaneMeter) {
+                  // 'SmartLoaderEstiamteLocations:402' smartLoaderStruct.loaderLocStatus = false; 
+                  smartLoaderStruct->loaderLocStatus = false;
+
+                  // 'SmartLoaderEstiamteLocations:404' if coder.target('Matlab') 
+                  // 'SmartLoaderEstiamteLocations:407' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eFailedLoaderLocation; 
+                  smartLoaderStruct->status =
+                    PerceptionSmartLoaderReturnValue_eFailedLoaderLocation;
+                } else {
+                  // 'SmartLoaderEstiamteLocations:411' smartLoaderStruct.loaderLocStatus = true; 
+                  smartLoaderStruct->loaderLocStatus = true;
+
+                  //  Calcualte the yaw angle of the loader
+                  //  Get all the poitns that are close to the loader
+                  // 'SmartLoaderEstiamteLocations:415' if smartLoaderStruct.loaderLocStatus && smartLoaderStruct.shovelLocStatus 
+                  if (smartLoaderStruct->shovelLocStatus) {
+                    //  figure, PlotPointCloud(ptCloudSenceXyz);
+                    // 'SmartLoaderEstiamteLocations:418' ptCloudSenceXyzFromLoaderLoc = bsxfun(@minus, ptCloudSenceXyz(:,1:2), cast(smartLoaderStruct.loaderLoc(1:2)', 'like', ptCloudSenceXyz)); 
+                    // 'SmartLoaderEstiamteLocations:419' distanecToLoader = vecnorm(ptCloudSenceXyzFromLoaderLoc,2,2); 
+                    // 'SmartLoaderEstiamteLocations:420' isInsideLoaderReflector = distanecToLoader < configParams.loaderCenterToBackwardPointMeter + configParams.loaderWhiteHatMeter / 2; 
+                    loop_ub = ptCloudSenceXyz_size[0];
+                    b_ptCloudSenceXyz_size[1] = 2;
+                    b_ptCloudSenceXyz_size[0] = ptCloudSenceXyz_size[0];
+                    for (i46 = 0; i46 < loop_ub; i46++) {
+                      m = i46 << 1;
+                      SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
+                        ptCloudSenceXyz_data[3 * i46];
+                      SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
+                        ptCloudSenceXyz_data[1 + 3 * i46];
+                    }
+
+                    r[0] = (float)smartLoaderStruct->loaderLoc[0];
+                    r[1] = (float)smartLoaderStruct->loaderLoc[1];
+                    bsxfun(SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
+                           b_ptCloudSenceXyz_size, r,
+                           SD->u6.f20.kmeansDistanceMat_data, input_sizes);
+                    b_vecnorm(SD->u6.f20.kmeansDistanceMat_data, input_sizes,
+                              SD->u6.f20.x_data, x_size);
+                    singleReflectorRangeLimitMeter =
+                      configParams->loaderCenterToBackwardPointMeter +
+                      configParams->loaderWhiteHatMeter / 2.0;
+                    loop_ub = x_size[0];
+                    for (i46 = 0; i46 < loop_ub; i46++) {
+                      SD->u6.f20.ptCloudSenceReflectorsInd_data[i46] =
+                        (SD->u6.f20.x_data[i46] < singleReflectorRangeLimitMeter);
+                    }
+
+                    // 'SmartLoaderEstiamteLocations:422' loaderXyz = ptCloudSenceXyz(isInsideLoaderReflector,:); 
+                    m = x_size[0] - 1;
+                    trueCount = 0;
+                    for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+                      if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
+                        trueCount++;
+                      }
+                    }
+
+                    partialTrueCount = 0;
+                    for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+                      if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
+                        SD->u6.f20.f_tmp_data[partialTrueCount] = loop_ub + 1;
+                        partialTrueCount++;
+                      }
+                    }
+
+                    ptCloudSenceReflectorsXyz_size[1] = 3;
+                    ptCloudSenceReflectorsXyz_size[0] = trueCount;
+                    for (i46 = 0; i46 < trueCount; i46++) {
+                      m = 3 * (SD->u6.f20.f_tmp_data[i46] - 1);
+                      SD->u6.f20.ptCloudSenceReflectorsXyz_data[3 * i46] =
+                        ptCloudSenceXyz_data[m];
+                      SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + 3 * i46] =
+                        ptCloudSenceXyz_data[1 + m];
+                      SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + 3 * i46] =
+                        ptCloudSenceXyz_data[2 + m];
+                    }
+
+                    //  figure, PlotPointCloud(loaderXyz);
+                    //  Get all points higher than 10cm from the ground
+                    // 'SmartLoaderEstiamteLocations:426' [loaderXyzPlaneDistance, ~] = CalcPlaneToPointDistance(configParams.planeModelParameters, loaderXyz); 
+                    c_CalcPlaneToPointDistance(SD,
+                      configParams->planeModelParameters,
+                      SD->u6.f20.ptCloudSenceReflectorsXyz_data,
+                      ptCloudSenceReflectorsXyz_size, SD->u6.f20.x_data, x_size,
+                      SD->u6.f20.ptCloudSenceReflectorsInd_data, kmeansIdx_size);
+
+                    // 'SmartLoaderEstiamteLocations:426' ~
+                    // 'SmartLoaderEstiamteLocations:428' coder.varsize('loaderXyzFiltered', [SmartLoaderCompilationConstants.MaxPointCloudSize 3], [1 0]); 
+                    // 'SmartLoaderEstiamteLocations:429' loaderXyzFiltered = loaderXyz(loaderXyzPlaneDistance > configParams.maxDistanceFromThePlaneForLoaderYawCalculation,:); 
+                    loop_ub = x_size[0];
+                    for (i46 = 0; i46 < loop_ub; i46++) {
+                      SD->u6.f20.ptCloudSenceReflectorsInd_data[i46] =
+                        (SD->u6.f20.x_data[i46] >
+                         configParams->maxDistanceFromThePlaneForLoaderYawCalculation);
+                    }
+
+                    m = x_size[0] - 1;
+                    trueCount = 0;
+                    for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+                      if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
+                        trueCount++;
+                      }
+                    }
+
+                    partialTrueCount = 0;
+                    for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+                      if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]) {
+                        SD->u6.f20.g_tmp_data[partialTrueCount] = loop_ub + 1;
+                        partialTrueCount++;
+                      }
+                    }
+
+                    for (i46 = 0; i46 < trueCount; i46++) {
+                      m = 3 * (SD->u6.f20.g_tmp_data[i46] - 1);
+                      SD->u6.f20.pcFirstXyz_data[3 * i46] =
+                        SD->u6.f20.ptCloudSenceReflectorsXyz_data[m];
+                      SD->u6.f20.pcFirstXyz_data[1 + 3 * i46] =
+                        SD->u6.f20.ptCloudSenceReflectorsXyz_data[1 + m];
+                      SD->u6.f20.pcFirstXyz_data[2 + 3 * i46] =
+                        SD->u6.f20.ptCloudSenceReflectorsXyz_data[2 + m];
+                    }
+
+                    // 'SmartLoaderEstiamteLocations:430' if false
+                    //  In case we have the previous loader yaw angle, use it in order to mask the loader points - Othewise - use all the points (loader and shovel) 
+                    // 'SmartLoaderEstiamteLocations:436' if ~isempty(SmartLoaderGlobal.smartLoaderStructHistory) && SmartLoaderGlobal.smartLoaderStructHistory(end).loaderYawAngleStatus && ... 
+                    // 'SmartLoaderEstiamteLocations:437'             configParams.timeTagMs - SmartLoaderGlobal.loaderTimeTatHistoryMs(end) < configParams.maximumTimeTagDiffMs 
+                    if ((SD->pd->
+                         SmartLoaderGlobal.smartLoaderStructHistory.size[0] != 0)
+                        && SD->
+                        pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                        [SD->pd->
+                        SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                        loaderYawAngleStatus && (configParams->timeTagMs -
+                         SD->pd->
+                         SmartLoaderGlobal.loaderTimeTatHistoryMs.data[SD->
+                         pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] -
+                         1] < configParams->maximumTimeTagDiffMs)) {
+                      //  Filter the point according to the previous yaw angle
+                      //  determine which points reside inside the loader reflector  
+                      // 'SmartLoaderEstiamteLocations:442' loaderXyzFilteredStartFromLoaderLoc = bsxfun(@minus, loaderXyzFiltered(:,1:2), cast(smartLoaderStruct.loaderLoc(1:2)', 'like', ptCloudSenceXyz)); 
+                      // 'SmartLoaderEstiamteLocations:443' distanceFromLoaderToXYZ = vecnorm(loaderXyzFilteredStartFromLoaderLoc,2,2); 
+                      // 'SmartLoaderEstiamteLocations:444' isInsideLoaderReflector = distanceFromLoaderToXYZ < (configParams.locationsBiasMeter + configParams.loaderReflectorDiameterMeter / 2); 
+                      b_pcFirstXyz_size[1] = 2;
+                      b_pcFirstXyz_size[0] = trueCount;
+                      for (i46 = 0; i46 < trueCount; i46++) {
+                        m = i46 << 1;
+                        SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
+                          SD->u6.f20.pcFirstXyz_data[3 * i46];
+                        SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
+                          SD->u6.f20.pcFirstXyz_data[1 + 3 * i46];
+                      }
+
+                      r[0] = (float)smartLoaderStruct->loaderLoc[0];
+                      r[1] = (float)smartLoaderStruct->loaderLoc[1];
+                      bsxfun(SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
+                             b_pcFirstXyz_size, r,
+                             SD->u6.f20.kmeansDistanceMat_data, input_sizes);
+                      b_vecnorm(SD->u6.f20.kmeansDistanceMat_data, input_sizes,
+                                SD->u6.f20.x_data, x_size);
+                      singleReflectorRangeLimitMeter =
+                        configParams->locationsBiasMeter + v_idx_0;
+                      loop_ub = x_size[0];
+                      for (i46 = 0; i46 < loop_ub; i46++) {
+                        SD->u6.f20.ptCloudSenceReflectorsInd_data[i46] =
+                          (SD->u6.f20.x_data[i46] <
+                           singleReflectorRangeLimitMeter);
+                      }
+
+                      // 'SmartLoaderEstiamteLocations:446' if false
+                      //  Find the bounding box location of the loader
+                      // 'SmartLoaderEstiamteLocations:452' loaderToShovel2Dvec = [1 0]; 
+                      // 'SmartLoaderEstiamteLocations:453' currentAngleDeg = SmartLoaderGlobal.smartLoaderStructHistory(end).loaderYawAngleDeg; 
+                      // 'SmartLoaderEstiamteLocations:454' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
+                      // 'SmartLoaderEstiamteLocations:455' loaderToShovel2Dvec = loaderToShovel2Dvec * rotMatCCW; 
+                      d5 = SD->
+                        pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                        [SD->pd->
+                        SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                        loaderYawAngleDeg;
+                      b_cosd(&d5);
+                      d6 = SD->
+                        pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                        [SD->pd->
+                        SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                        loaderYawAngleDeg;
+                      b_sind(&d6);
+                      v_idx_0 = SD->
+                        pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                        [SD->pd->
+                        SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                        loaderYawAngleDeg;
+                      b_sind(&v_idx_0);
+                      v_idx_0 = SD->
+                        pd->SmartLoaderGlobal.smartLoaderStructHistory.data
+                        [SD->pd->
+                        SmartLoaderGlobal.smartLoaderStructHistory.size[0] - 1].
+                        loaderYawAngleDeg;
+                      b_cosd(&v_idx_0);
+
+                      // 'SmartLoaderEstiamteLocations:456' if false
+                      // 'SmartLoaderEstiamteLocations:462' currentAngleDeg = 90; 
+                      // 'SmartLoaderEstiamteLocations:463' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
+                      // 'SmartLoaderEstiamteLocations:464' p1 = smartLoaderStruct.loaderLoc(1:2) + (configParams.locationsBiasMeter + configParams.loaderWidthMeter/2) * (loaderToShovel2Dvec * rotMatCCW)'; 
+                      singleReflectorRangeLimitMeter =
+                        configParams->loaderWidthMeter / 2.0;
+                      a_tmp = configParams->locationsBiasMeter +
+                        singleReflectorRangeLimitMeter;
+
+                      // 'SmartLoaderEstiamteLocations:466' currentAngleDeg = -90; 
+                      // 'SmartLoaderEstiamteLocations:467' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
+                      // 'SmartLoaderEstiamteLocations:468' p4 = smartLoaderStruct.loaderLoc(1:2) + (configParams.locationsBiasMeter + configParams.loaderWidthMeter/2) * (loaderToShovel2Dvec * rotMatCCW)'; 
+                      // 'SmartLoaderEstiamteLocations:470' loaderToLeftBackOftheLoaderAng = atan2d(configParams.loaderCenterToBackwardPointMeter, configParams.loaderWidthMeter/2); 
+                      v_idx_1 = 57.295779513082323 * atan2
+                        (configParams->loaderCenterToBackwardPointMeter,
+                         singleReflectorRangeLimitMeter);
+
+                      // 'SmartLoaderEstiamteLocations:471' loaderToLeftBackOftheLoaderDistanceMeter = configParams.locationsBiasMeter + norm( [configParams.loaderWidthMeter/2; configParams.loaderCenterToBackwardPointMeter]); 
+                      p4[0] = singleReflectorRangeLimitMeter;
+                      p4[1] = configParams->loaderCenterToBackwardPointMeter;
+                      loaderToLeftBackOftheLoaderDistanceMeter =
+                        configParams->locationsBiasMeter + d_norm(p4);
+
+                      // 'SmartLoaderEstiamteLocations:473' currentAngleDeg = loaderToLeftBackOftheLoaderAng + 90; 
+                      // 'SmartLoaderEstiamteLocations:474' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
+                      // 'SmartLoaderEstiamteLocations:475' p2 = smartLoaderStruct.loaderLoc(1:2) + loaderToLeftBackOftheLoaderDistanceMeter * (loaderToShovel2Dvec * rotMatCCW)'; 
+                      v_idx_0 = v_idx_1 + 90.0;
+                      b_cosd(&v_idx_0);
+                      d7 = v_idx_1 + 90.0;
+                      b_sind(&d7);
+                      d8 = v_idx_1 + 90.0;
+                      b_sind(&d8);
+                      d9 = v_idx_1 + 90.0;
+                      b_cosd(&d9);
+
+                      // 'SmartLoaderEstiamteLocations:477' currentAngleDeg = currentAngleDeg * -1; 
+                      // 'SmartLoaderEstiamteLocations:478' rotMatCCW = [cosd(currentAngleDeg) sind(currentAngleDeg); -sind(currentAngleDeg) cosd(currentAngleDeg)]; 
+                      // 'SmartLoaderEstiamteLocations:479' p3 = smartLoaderStruct.loaderLoc(1:2) + loaderToLeftBackOftheLoaderDistanceMeter * (loaderToShovel2Dvec * rotMatCCW)'; 
+                      d10 = -(v_idx_1 + 90.0);
+                      b_cosd(&d10);
+                      d11 = -(v_idx_1 + 90.0);
+                      b_sind(&d11);
+                      d12 = -(v_idx_1 + 90.0);
+                      b_sind(&d12);
+                      singleReflectorRangeLimitMeter = -(v_idx_1 + 90.0);
+                      b_cosd(&singleReflectorRangeLimitMeter);
+
+                      // 'SmartLoaderEstiamteLocations:481' loaderBBxs = [p1(1);p2(1);p3(1);p4(1)]; 
+                      // 'SmartLoaderEstiamteLocations:482' loaderBBys = [p1(2);p2(2);p3(2);p4(2)]; 
+                      // 'SmartLoaderEstiamteLocations:484' if false
+                      // 'SmartLoaderEstiamteLocations:507' isInsidePolygon = inpolygon(loaderXyzFiltered(:,1), loaderXyzFiltered(:,2), loaderBBxs, loaderBBys); 
+                      c_pcFirstXyz_size[0] = trueCount;
+                      for (i46 = 0; i46 < trueCount; i46++) {
+                        SD->u6.f20.x_data[i46] = SD->u6.f20.pcFirstXyz_data[3 *
+                          i46];
+                      }
+
+                      for (i46 = 0; i46 < trueCount; i46++) {
+                        SD->u6.f20.tmp_data[i46] = SD->u6.f20.pcFirstXyz_data[1
+                          + 3 * i46];
+                      }
+
+                      p1[0] = smartLoaderStruct->loaderLoc[0] + a_tmp * -d6;
+                      p1[1] = smartLoaderStruct->loaderLoc[0] +
+                        loaderToLeftBackOftheLoaderDistanceMeter * (v_idx_0 * d5
+                        + -d8 * d6);
+                      p1[2] = smartLoaderStruct->loaderLoc[0] +
+                        loaderToLeftBackOftheLoaderDistanceMeter * (d10 * d5 +
+                        -d12 * d6);
+                      p1[3] = smartLoaderStruct->loaderLoc[0] + a_tmp * d6;
+                      b_p1[0] = smartLoaderStruct->loaderLoc[1] + a_tmp * d5;
+                      b_p1[1] = smartLoaderStruct->loaderLoc[1] +
+                        loaderToLeftBackOftheLoaderDistanceMeter * (d7 * d5 + d9
+                        * d6);
+                      b_p1[2] = smartLoaderStruct->loaderLoc[1] +
+                        loaderToLeftBackOftheLoaderDistanceMeter * (d11 * d5 +
+                        singleReflectorRangeLimitMeter * d6);
+                      b_p1[3] = smartLoaderStruct->loaderLoc[1] + a_tmp * -d5;
+                      inpolygon(SD->u6.f20.x_data, c_pcFirstXyz_size,
+                                SD->u6.f20.tmp_data, p1, b_p1,
+                                SD->u6.f20.isInsidePolygon_data, kmeansIdx_size);
+
+                      //  loaderXyzFilteredInsidePoly = loaderXyzFiltered(isInsidePolygon,:); figure, PlotPointCloud(loaderXyzFilteredInsidePoly); 
+                      // 'SmartLoaderEstiamteLocations:510' isInsideLoaderReflectorOrPolygon = isInsideLoaderReflector | isInsidePolygon; 
+                      // 'SmartLoaderEstiamteLocations:511' sum_isInsideLoaderReflectorOrPolygon = sum(isInsideLoaderReflectorOrPolygon); 
+                      ptCloudSenceReflectorsInd_size[0] = x_size[0];
+                      loop_ub = x_size[0];
+                      for (i46 = 0; i46 < loop_ub; i46++) {
+                        SD->u6.f20.b_ptCloudSenceReflectorsInd_data[i46] =
+                          (SD->u6.f20.ptCloudSenceReflectorsInd_data[i46] ||
+                           SD->u6.f20.isInsidePolygon_data[i46]);
+                      }
+
+                      singleReflectorRangeLimitMeter = e_sum
+                        (SD->u6.f20.b_ptCloudSenceReflectorsInd_data,
+                         ptCloudSenceReflectorsInd_size);
+
+                      // 'SmartLoaderEstiamteLocations:513' if sum_isInsideLoaderReflectorOrPolygon / size(loaderXyzFiltered,1) > configParams.yawEstimationMinPercentageOfPointsInLoaderBody && ... 
+                      // 'SmartLoaderEstiamteLocations:514'                  sum_isInsideLoaderReflectorOrPolygon > configParams.yawEstimationMinNumPointsInLoaderBody 
+                      if ((singleReflectorRangeLimitMeter / (double)trueCount >
+                           configParams->yawEstimationMinPercentageOfPointsInLoaderBody)
+                          && (singleReflectorRangeLimitMeter >
+                              configParams->yawEstimationMinNumPointsInLoaderBody))
+                      {
+                        // 'SmartLoaderEstiamteLocations:516' loaderXyzFilteredInsidePolyAndInsideLoaderBB = loaderXyzFiltered(isInsideLoaderReflectorOrPolygon,:); 
+                        //  figure, PlotPointCloud(loaderXyzFilteredInsidePolyAndInsideLoaderBB);  
+                        // 'SmartLoaderEstiamteLocations:518' [V,D] = SmartLoaderCalcEigen(loaderXyzFilteredInsidePolyAndInsideLoaderBB(:,1:2)); 
+                        m = x_size[0] - 1;
+                        trueCount = 0;
+                        for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+                          if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]
+                              || SD->u6.f20.isInsidePolygon_data[loop_ub]) {
+                            trueCount++;
+                          }
+                        }
+
+                        partialTrueCount = 0;
+                        for (loop_ub = 0; loop_ub <= m; loop_ub++) {
+                          if (SD->u6.f20.ptCloudSenceReflectorsInd_data[loop_ub]
+                              || SD->u6.f20.isInsidePolygon_data[loop_ub]) {
+                            SD->u6.f20.h_tmp_data[partialTrueCount] = loop_ub +
+                              1;
+                            partialTrueCount++;
+                          }
+                        }
+
+                        for (i46 = 0; i46 < trueCount; i46++) {
+                          m = 3 * (SD->u6.f20.h_tmp_data[i46] - 1);
+                          SD->u6.f20.pcSecondXyz_data[3 * i46] =
+                            SD->u6.f20.pcFirstXyz_data[m];
+                          SD->u6.f20.pcSecondXyz_data[1 + 3 * i46] =
+                            SD->u6.f20.pcFirstXyz_data[1 + m];
+                          SD->u6.f20.pcSecondXyz_data[2 + 3 * i46] =
+                            SD->u6.f20.pcFirstXyz_data[2 + m];
+                        }
+
+                        d_pcFirstXyz_size[1] = 2;
+                        d_pcFirstXyz_size[0] = trueCount;
+                        for (i46 = 0; i46 < trueCount; i46++) {
+                          m = i46 << 1;
+                          SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
+                            SD->u6.f20.pcSecondXyz_data[3 * i46];
+                          SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
+                            SD->u6.f20.pcSecondXyz_data[1 + 3 * i46];
+                        }
+
+                        SmartLoaderCalcEigen(SD,
+                                             SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
+                                             d_pcFirstXyz_size, V, D);
+                      } else {
+                        // 'SmartLoaderEstiamteLocations:519' else
+                        // 'SmartLoaderEstiamteLocations:520' [V,D] = SmartLoaderCalcEigen(loaderXyzFiltered(:,1:2)); 
+                        d_pcFirstXyz_size[1] = 2;
+                        d_pcFirstXyz_size[0] = trueCount;
+                        for (i46 = 0; i46 < trueCount; i46++) {
+                          m = i46 << 1;
+                          SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
+                            SD->u6.f20.pcFirstXyz_data[3 * i46];
+                          SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
+                            SD->u6.f20.pcFirstXyz_data[1 + 3 * i46];
+                        }
+
+                        SmartLoaderCalcEigen(SD,
+                                             SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
+                                             d_pcFirstXyz_size, V, D);
+                      }
+                    } else {
+                      // 'SmartLoaderEstiamteLocations:522' else
+                      // 'SmartLoaderEstiamteLocations:523' [V,D] = SmartLoaderCalcEigen(loaderXyzFiltered(:,1:2)); 
+                      b_pcFirstXyz_size[1] = 2;
+                      b_pcFirstXyz_size[0] = trueCount;
+                      for (i46 = 0; i46 < trueCount; i46++) {
+                        m = i46 << 1;
+                        SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[m] =
+                          SD->u6.f20.pcFirstXyz_data[3 * i46];
+                        SD->u6.f20.c_ptCloudSenceReflectorsXyz_data[1 + m] =
+                          SD->u6.f20.pcFirstXyz_data[1 + 3 * i46];
+                      }
+
+                      SmartLoaderCalcEigen(SD,
+                                           SD->u6.f20.c_ptCloudSenceReflectorsXyz_data,
+                                           b_pcFirstXyz_size, V, D);
+                    }
+
+                    // 'SmartLoaderEstiamteLocations:525' [~,ind] = sort(diag(D)); 
+                    diag(D, largestEigenVec);
+                    b_sort(largestEigenVec, input_sizes);
+
+                    // 'SmartLoaderEstiamteLocations:525' ~
+                    //  Plot everything
+                    //  Pick the largest eigen vector
+                    // 'SmartLoaderEstiamteLocations:529' largestEigenVec = V(:,ind(end)); 
+                    //  determine whether or not the vector reside on the shovel side or the opposite side 
+                    // 'SmartLoaderEstiamteLocations:531' shovelToLoader2DVec = smartLoaderStruct.shovelLoc(1:2) - smartLoaderStruct.loaderLoc(1:2); 
+                    largestEigenVec[0] = V[input_sizes[1] - 1];
+                    p4[0] = smartLoaderStruct->shovelLoc[0] -
+                      smartLoaderStruct->loaderLoc[0];
+                    largestEigenVec[1] = V[input_sizes[1] + 1];
+                    p4[1] = smartLoaderStruct->shovelLoc[1] -
+                      smartLoaderStruct->loaderLoc[1];
+
+                    // 'SmartLoaderEstiamteLocations:532' shovelToLoader2DVec = shovelToLoader2DVec / norm(shovelToLoader2DVec); 
+                    d5 = d_norm(p4);
+
+                    // 'SmartLoaderEstiamteLocations:533' if dot(largestEigenVec, shovelToLoader2DVec) < 0 
+                    b_V[0] = V[input_sizes[1] - 1];
+                    p4[0] = (smartLoaderStruct->shovelLoc[0] -
+                             smartLoaderStruct->loaderLoc[0]) / d5;
+                    b_V[1] = V[input_sizes[1] + 1];
+                    p4[1] = (smartLoaderStruct->shovelLoc[1] -
+                             smartLoaderStruct->loaderLoc[1]) / d5;
+                    if ((dot(b_V, p4)).re < 0.0) {
+                      // 'SmartLoaderEstiamteLocations:534' largestEigenVec = largestEigenVec * -1; 
+                      largestEigenVec[0].re = -V[input_sizes[1] - 1].re;
+                      largestEigenVec[1].re = -V[input_sizes[1] + 1].re;
+                    }
+
+                    // 'SmartLoaderEstiamteLocations:536' smartLoaderStruct.loaderYawAngleDeg = atan2d(real(largestEigenVec(2,1)),real(largestEigenVec(1,1))); 
+                    smartLoaderStruct->loaderYawAngleDeg = 57.295779513082323 *
+                      atan2(largestEigenVec[1].re, largestEigenVec[0].re);
+
+                    // 'SmartLoaderEstiamteLocations:537' smartLoaderStruct.loaderYawAngleStatus = true; 
+                    smartLoaderStruct->loaderYawAngleStatus = true;
+
+                    // 'SmartLoaderEstiamteLocations:539' if false
+                    // 'SmartLoaderEstiamteLocations:551' if false
+                    //  From these two angles calculate the loader to shovel angle 
+                    // 'SmartLoaderEstiamteLocations:566' loaderToShovel2Dvec = smartLoaderStruct.shovelLoc(1:2) - smartLoaderStruct.loaderLoc(1:2); 
+                    p4[0] = smartLoaderStruct->shovelLoc[0] -
+                      smartLoaderStruct->loaderLoc[0];
+                    p4[1] = smartLoaderStruct->shovelLoc[1] -
+                      smartLoaderStruct->loaderLoc[1];
+
+                    // 'SmartLoaderEstiamteLocations:567' loaderToShovel2Dvec = loaderToShovel2Dvec / norm(loaderToShovel2Dvec); 
+                    d5 = d_norm(p4);
+                    p4[0] = (smartLoaderStruct->shovelLoc[0] -
+                             smartLoaderStruct->loaderLoc[0]) / d5;
+                    p4[1] = (smartLoaderStruct->shovelLoc[1] -
+                             smartLoaderStruct->loaderLoc[1]) / d5;
+
+                    // 'SmartLoaderEstiamteLocations:568' loader2Dvec = ([1 0] * [cosd(smartLoaderStruct.loaderYawAngleDeg) sind(smartLoaderStruct.loaderYawAngleDeg); -sind(smartLoaderStruct.loaderYawAngleDeg) cosd(smartLoaderStruct.loaderYawAngleDeg)])'; 
+                    d5 = smartLoaderStruct->loaderYawAngleDeg;
+                    b_cosd(&d5);
+                    d6 = smartLoaderStruct->loaderYawAngleDeg;
+                    b_sind(&d6);
+                    v_idx_0 = smartLoaderStruct->loaderYawAngleDeg;
+                    b_sind(&v_idx_0);
+                    v_idx_0 = smartLoaderStruct->loaderYawAngleDeg;
+                    b_cosd(&v_idx_0);
+
+                    //  there is no need to normalize the loader2Dvec vector becuase rotation matrix is orthonormalize 
+                    //  This equations relate to right hand coordinate system
+                    // 'SmartLoaderEstiamteLocations:572' tempDot = loaderToShovel2Dvec(1)*loader2Dvec(1) + loaderToShovel2Dvec(2)*loader2Dvec(2); 
+                    // 'SmartLoaderEstiamteLocations:573' tempDet = loaderToShovel2Dvec(2)*loader2Dvec(1) - loaderToShovel2Dvec(1)*loader2Dvec(2); 
+                    // 'SmartLoaderEstiamteLocations:574' smartLoaderStruct.loaderToShovelYawAngleDeg = atan2d(tempDet, tempDot); 
+                    smartLoaderStruct->loaderToShovelYawAngleDeg =
+                      57.295779513082323 * atan2(p4[1] * d5 - p4[0] * d6, p4[0] *
+                      d5 + p4[1] * d6);
+
+                    // 'SmartLoaderEstiamteLocations:575' smartLoaderStruct.loaderToShovelYawAngleDegStatus = true; 
+                    smartLoaderStruct->loaderToShovelYawAngleDegStatus = true;
+                  }
+
+                  //  Determine the bounding box of the loader
+                  // 'SmartLoaderEstiamteLocations:580' if coder.target('Matlab') && false 
+                }
+              }
+            }
+          }
+        } else {
+          // 'SmartLoaderEstiamteLocations:252' if coder.target('Matlab')
+        }
+      }
+
+      emxFree_real32_T(&d_reshapes);
+      emxFreeMatrix_cell_wrap_4(c_reshapes);
+      emxFreeMatrix_cell_wrap_4(b_reshapes);
+      emxFree_real32_T(&varargin_1);
+      emxFreeMatrix_cell_wrap_4(reshapes);
+      emxFree_cell_wrap_4_64x1(&r2);
+      emxFree_cell_wrap_4_64x1(&clustersYs);
+      emxFree_cell_wrap_4_64x1(&clustersXs);
+      emxFree_real32_T(&Z);
+      emxFree_real32_T(&pdistOutput);
+    }
   }
 }
 
@@ -4806,7 +5019,7 @@ static void b_CalcPlaneToPointDistance(const double planeModelParameters[4],
     planeModelParameters[3];
 
   // 'CalcPlaneToPointDistance:22' distanceFromPointToPlane = abs(temp1) / norm(planeModelParameters(1:3)); 
-  *distanceFromPointToPlane = std::abs(temp1) / b_norm(*(double (*)[3])&
+  *distanceFromPointToPlane = std::abs(temp1) / c_norm(*(double (*)[3])&
     planeModelParameters[0]);
 
   // 'CalcPlaneToPointDistance:24' isPointAbovePlane = temp1 > 0;
@@ -4831,27 +5044,6 @@ static void b_abs(const float x_data[], const int x_size[1], float y_data[], int
     for (k = 0; k < i10; k++) {
       y_data[k] = std::abs(x_data[k]);
     }
-  }
-}
-
-//
-// Arguments    : const int x_size[2]
-//                boolean_T y_data[]
-//                int y_size[1]
-// Return Type  : void
-//
-static void b_any(const int x_size[2], boolean_T y_data[], int y_size[1])
-{
-  int hi;
-  int k;
-  y_size[0] = x_size[0];
-  if (0 <= x_size[0] - 1) {
-    memset(&y_data[0], 0, (unsigned int)(x_size[0] * (int)sizeof(boolean_T)));
-  }
-
-  hi = x_size[0];
-  for (k = 0; k < hi; k++) {
-    y_data[k] = false;
   }
 }
 
@@ -4985,6 +5177,16 @@ static void b_bsxfun(const float a_data[], const int a_size[2], const double
 }
 
 //
+// Arguments    : double x[2]
+// Return Type  : void
+//
+static void b_ceil(double x[2])
+{
+  x[0] = std::ceil(x[0]);
+  x[1] = std::ceil(x[1]);
+}
+
+//
 // Arguments    : double *x
 // Return Type  : void
 //
@@ -5050,7 +5252,7 @@ static void b_distfun(float D_data[], const float X_data[], const int X_size[2],
   int i;
   int cr;
   int r;
-  int i55;
+  int i51;
   n = X_size[0] - 1;
   for (i = 0; i < ncrows; i++) {
     cr = crows[i] - 1;
@@ -5060,8 +5262,8 @@ static void b_distfun(float D_data[], const float X_data[], const int X_size[2],
     }
 
     for (r = 0; r <= n; r++) {
-      i55 = cr + (r << 1);
-      D_data[i55] += std::pow(X_data[3 * r + 1] - C[3 * cr + 1], 2.0F);
+      i51 = cr + (r << 1);
+      D_data[i51] += std::pow(X_data[3 * r + 1] - C[3 * cr + 1], 2.0F);
     }
 
     for (r = 0; r <= n; r++) {
@@ -5083,36 +5285,36 @@ static void b_gcentroids(float C[6], int counts[2], const float X_data[], const
   int X_size[2], const int idx_data[], int clusters)
 {
   int n;
-  int i59;
-  int i60;
-  int i61;
+  int i55;
+  int i56;
+  int i57;
   int cc;
   int i;
   n = X_size[0];
   counts[clusters - 1] = 0;
-  i59 = 3 * (clusters - 1);
-  C[i59] = 0.0F;
-  i60 = 1 + i59;
-  C[i60] = 0.0F;
-  i61 = 2 + i59;
-  C[i61] = 0.0F;
+  i55 = 3 * (clusters - 1);
+  C[i55] = 0.0F;
+  i56 = 1 + i55;
+  C[i56] = 0.0F;
+  i57 = 2 + i55;
+  C[i57] = 0.0F;
   cc = 0;
-  C[i59] = 0.0F;
-  C[i60] = 0.0F;
-  C[i61] = 0.0F;
+  C[i55] = 0.0F;
+  C[i56] = 0.0F;
+  C[i57] = 0.0F;
   for (i = 0; i < n; i++) {
     if (idx_data[i] == clusters) {
       cc++;
-      C[i59] += X_data[3 * i];
-      C[i60] += X_data[1 + 3 * i];
-      C[i61] += X_data[2 + 3 * i];
+      C[i55] += X_data[3 * i];
+      C[i56] += X_data[1 + 3 * i];
+      C[i57] += X_data[2 + 3 * i];
     }
   }
 
   counts[clusters - 1] = cc;
-  C[i59] /= (float)cc;
-  C[i60] /= (float)cc;
-  C[i61] /= (float)cc;
+  C[i55] /= (float)cc;
+  C[i56] /= (float)cc;
+  C[i57] /= (float)cc;
 }
 
 //
@@ -5205,7 +5407,7 @@ static void b_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
   const float x_data[], const int x_size[2], const int dir_data[], const int
   dir_size[2], int n)
 {
-  int i38;
+  int i34;
   int k;
   int i;
   int i2;
@@ -5215,9 +5417,9 @@ static void b_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
   int q;
   int qEnd;
   int kEnd;
-  int i39;
-  i38 = n - 1;
-  for (k = 1; k <= i38; k += 2) {
+  int i35;
+  i34 = n - 1;
+  for (k = 1; k <= i34; k += 2) {
     if (sortLE(x_data, x_size, dir_data, dir_size, k, k + 1)) {
       idx_data[k - 1] = k;
       idx_data[k] = k + 1;
@@ -5246,10 +5448,10 @@ static void b_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
       k = 0;
       kEnd = qEnd - j;
       while (k + 1 <= kEnd) {
-        i38 = idx_data[q - 1];
-        i39 = idx_data[p - 1];
-        if (sortLE(x_data, x_size, dir_data, dir_size, i39, i38)) {
-          SD->u1.f9.iwork_data[k] = i39;
+        i34 = idx_data[q - 1];
+        i35 = idx_data[p - 1];
+        if (sortLE(x_data, x_size, dir_data, dir_size, i35, i34)) {
+          SD->u1.f9.iwork_data[k] = i35;
           p++;
           if (p == pEnd) {
             while (q < qEnd) {
@@ -5259,7 +5461,7 @@ static void b_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
             }
           }
         } else {
-          SD->u1.f9.iwork_data[k] = i38;
+          SD->u1.f9.iwork_data[k] = i34;
           q++;
           if (q == qEnd) {
             while (p < pEnd) {
@@ -5294,11 +5496,11 @@ static void b_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
 static void b_nestedIter(const float x_data[], const int x_size[2], float
   y_data[], int y_size[1])
 {
-  int i23;
+  int i22;
   int k;
   y_size[0] = x_size[0];
-  i23 = x_size[0];
-  for (k = 0; k < i23; k++) {
+  i22 = x_size[0];
+  for (k = 0; k < i22; k++) {
     y_data[k] = x_data[3 * k];
     y_data[k] += x_data[3 * k + 1];
     y_data[k] += x_data[3 * k + 2];
@@ -5306,29 +5508,29 @@ static void b_nestedIter(const float x_data[], const int x_size[2], float
 }
 
 //
-// Arguments    : const double x[3]
-// Return Type  : double
+// Arguments    : const float x[3]
+// Return Type  : float
 //
-static double b_norm(const double x[3])
+static float b_norm(const float x[3])
 {
-  double y;
-  double scale;
-  double absxk;
-  double t;
-  scale = 3.3121686421112381E-170;
+  float y;
+  float scale;
+  float absxk;
+  float t;
+  scale = 1.29246971E-26F;
   absxk = std::abs(x[0]);
-  if (absxk > 3.3121686421112381E-170) {
-    y = 1.0;
+  if (absxk > 1.29246971E-26F) {
+    y = 1.0F;
     scale = absxk;
   } else {
-    t = absxk / 3.3121686421112381E-170;
+    t = absxk / 1.29246971E-26F;
     y = t * t;
   }
 
   absxk = std::abs(x[1]);
   if (absxk > scale) {
     t = scale / absxk;
-    y = 1.0 + y * t * t;
+    y = 1.0F + y * t * t;
     scale = absxk;
   } else {
     t = absxk / scale;
@@ -5338,7 +5540,7 @@ static double b_norm(const double x[3])
   absxk = std::abs(x[2]);
   if (absxk > scale) {
     t = scale / absxk;
-    y = 1.0 + y * t * t;
+    y = 1.0F + y * t * t;
     scale = absxk;
   } else {
     t = absxk / scale;
@@ -5514,25 +5716,6 @@ static void b_repmat(const double a[3], double varargin_1, double b_data[], int
 }
 
 //
-// Arguments    : float x_data[]
-//                int x_size[2]
-// Return Type  : void
-//
-static void b_round(float x_data[], int x_size[2])
-{
-  int i36;
-  int k;
-  int i37;
-  i36 = x_size[0];
-  for (k = 0; k < i36; k++) {
-    i37 = k << 1;
-    x_data[i37] = rt_roundf(x_data[i37]);
-    i37++;
-    x_data[i37] = rt_roundf(x_data[i37]);
-  }
-}
-
-//
 // Arguments    : double *x
 // Return Type  : void
 //
@@ -5660,13 +5843,13 @@ static boolean_T b_sortLE(const float v_data[], int idx1, int idx2)
 //
 static void b_sqrt(float x_data[], int x_size[1])
 {
-  int i48;
+  int i44;
   int k;
-  int i49;
-  i48 = x_size[0];
-  for (k = 0; k < i48; k++) {
-    i49 = (signed char)(1 + k) - 1;
-    x_data[i49] = std::sqrt(x_data[i49]);
+  int i45;
+  i44 = x_size[0];
+  for (k = 0; k < i44; k++) {
+    i45 = (signed char)(1 + k) - 1;
+    x_data[i45] = std::sqrt(x_data[i45]);
   }
 }
 
@@ -6070,7 +6253,7 @@ static void c_CalcPlaneToPointDistance(PerceptionSmartLoaderStackData *SD, const
   int b_tmp_size[2];
   int temp1_size[1];
   int loop_ub;
-  int i22;
+  int i21;
   double y;
 
   // assert(isa(planeModelParameters, 'double'));
@@ -6084,50 +6267,25 @@ static void c_CalcPlaneToPointDistance(PerceptionSmartLoaderStackData *SD, const
            SD->u1.f1.b_tmp_data, b_tmp_size);
   d_sum(SD->u1.f1.b_tmp_data, b_tmp_size, SD->u1.f1.temp1_data, temp1_size);
   loop_ub = temp1_size[0];
-  for (i22 = 0; i22 < loop_ub; i22++) {
-    SD->u1.f1.temp1_data[i22] += (float)planeModelParameters[3];
+  for (i21 = 0; i21 < loop_ub; i21++) {
+    SD->u1.f1.temp1_data[i21] += (float)planeModelParameters[3];
   }
 
   // 'CalcPlaneToPointDistance:22' distanceFromPointToPlane = abs(temp1) / norm(planeModelParameters(1:3)); 
-  y = b_norm(*(double (*)[3])&planeModelParameters[0]);
+  y = c_norm(*(double (*)[3])&planeModelParameters[0]);
   b_abs(SD->u1.f1.temp1_data, temp1_size, distanceFromPointToPlane_data,
         distanceFromPointToPlane_size);
   loop_ub = distanceFromPointToPlane_size[0];
-  for (i22 = 0; i22 < loop_ub; i22++) {
-    distanceFromPointToPlane_data[i22] /= (float)y;
+  for (i21 = 0; i21 < loop_ub; i21++) {
+    distanceFromPointToPlane_data[i21] /= (float)y;
   }
 
   // 'CalcPlaneToPointDistance:24' isPointAbovePlane = temp1 > 0;
   isPointAbovePlane_size[0] = temp1_size[0];
   loop_ub = temp1_size[0];
-  for (i22 = 0; i22 < loop_ub; i22++) {
-    isPointAbovePlane_data[i22] = (SD->u1.f1.temp1_data[i22] > 0.0F);
+  for (i21 = 0; i21 < loop_ub; i21++) {
+    isPointAbovePlane_data[i21] = (SD->u1.f1.temp1_data[i21] > 0.0F);
   }
-}
-
-//
-// Arguments    : const boolean_T x_data[]
-//                const int x_size[2]
-// Return Type  : boolean_T
-//
-static boolean_T c_any(const boolean_T x_data[], const int x_size[2])
-{
-  boolean_T y;
-  int k;
-  boolean_T exitg1;
-  y = false;
-  k = 0;
-  exitg1 = false;
-  while ((!exitg1) && (k <= x_size[1] - 1)) {
-    if (x_data[k]) {
-      y = true;
-      exitg1 = true;
-    } else {
-      k++;
-    }
-  }
-
-  return y;
 }
 
 //
@@ -6140,7 +6298,7 @@ static boolean_T c_any(const boolean_T x_data[], const int x_size[2])
 static void c_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
   const float x_data[], int n)
 {
-  int i41;
+  int i37;
   int k;
   int i;
   int i2;
@@ -6150,9 +6308,9 @@ static void c_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
   int q;
   int qEnd;
   int kEnd;
-  int i42;
-  i41 = n - 1;
-  for (k = 1; k <= i41; k += 2) {
+  int i38;
+  i37 = n - 1;
+  for (k = 1; k <= i37; k += 2) {
     if (b_sortLE(x_data, k, k + 1)) {
       idx_data[k - 1] = k;
       idx_data[k] = k + 1;
@@ -6181,10 +6339,10 @@ static void c_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
       k = 0;
       kEnd = qEnd - j;
       while (k + 1 <= kEnd) {
-        i41 = idx_data[q - 1];
-        i42 = idx_data[p - 1];
-        if (b_sortLE(x_data, i42, i41)) {
-          SD->u1.f7.iwork_data[k] = i42;
+        i37 = idx_data[q - 1];
+        i38 = idx_data[p - 1];
+        if (b_sortLE(x_data, i38, i37)) {
+          SD->u1.f7.iwork_data[k] = i38;
           p++;
           if (p == pEnd) {
             while (q < qEnd) {
@@ -6194,7 +6352,7 @@ static void c_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
             }
           }
         } else {
-          SD->u1.f7.iwork_data[k] = i41;
+          SD->u1.f7.iwork_data[k] = i37;
           q++;
           if (q == qEnd) {
             while (p < pEnd) {
@@ -6220,10 +6378,10 @@ static void c_mergesort(PerceptionSmartLoaderStackData *SD, int idx_data[],
 }
 
 //
-// Arguments    : const double x[2]
+// Arguments    : const double x[3]
 // Return Type  : double
 //
-static double c_norm(const double x[2])
+static double c_norm(const double x[3])
 {
   double y;
   double scale;
@@ -6249,6 +6407,16 @@ static double c_norm(const double x[2])
     y += t * t;
   }
 
+  absxk = std::abs(x[2]);
+  if (absxk > scale) {
+    t = scale / absxk;
+    y = 1.0 + y * t * t;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    y += t * t;
+  }
+
   return scale * std::sqrt(y);
 }
 
@@ -6263,15 +6431,15 @@ static void c_nullAssignment(PerceptionSmartLoaderStackData *SD, float x_data[],
   int x_size[2], const int idx_data[])
 {
   int nrows;
-  int i64;
+  int i60;
   int i;
   nrows = x_size[0] - 1;
-  i64 = idx_data[0];
-  for (i = i64; i <= nrows; i++) {
+  i60 = idx_data[0];
+  for (i = i60; i <= nrows; i++) {
     x_data[(i - 1) << 1] = x_data[i << 1];
   }
 
-  for (i = i64; i <= nrows; i++) {
+  for (i = i60; i <= nrows; i++) {
     x_data[1 + ((i - 1) << 1)] = x_data[1 + (i << 1)];
   }
 
@@ -6281,8 +6449,8 @@ static void c_nullAssignment(PerceptionSmartLoaderStackData *SD, float x_data[],
     i = x_size[0] - 1;
   }
 
-  for (i64 = 0; i64 < i; i64++) {
-    nrows = i64 << 1;
+  for (i60 = 0; i60 < i; i60++) {
+    nrows = i60 << 1;
     SD->u1.f2.x_data[nrows] = x_data[nrows];
     nrows++;
     SD->u1.f2.x_data[nrows] = x_data[nrows];
@@ -6290,8 +6458,8 @@ static void c_nullAssignment(PerceptionSmartLoaderStackData *SD, float x_data[],
 
   x_size[1] = 2;
   x_size[0] = i;
-  for (i64 = 0; i64 < i; i64++) {
-    nrows = i64 << 1;
+  for (i60 = 0; i60 < i; i60++) {
+    nrows = i60 << 1;
     x_data[nrows] = SD->u1.f2.x_data[nrows];
     nrows++;
     x_data[nrows] = SD->u1.f2.x_data[nrows];
@@ -6310,8 +6478,8 @@ static void c_sortIdx(float x_data[], int x_size[1], int idx_data[], int
 {
   int unnamed_idx_0;
   int loop_ub;
-  int i44;
-  int i45;
+  int i40;
+  int i41;
   float x4[4];
   int idx4[4];
   int ib;
@@ -6342,8 +6510,8 @@ static void c_sortIdx(float x_data[], int x_size[1], int idx_data[], int
              (unsigned int)(loop_ub * (int)sizeof(float)));
     }
 
-    i44 = x_size[0];
-    i45 = x_size[0] - 1;
+    i40 = x_size[0];
+    i41 = x_size[0] - 1;
     x4[0] = 0.0F;
     idx4[0] = 0;
     x4[1] = 0.0F;
@@ -6364,7 +6532,7 @@ static void c_sortIdx(float x_data[], int x_size[1], int idx_data[], int
     }
 
     ib = -1;
-    for (k = 0; k <= i45; k++) {
+    for (k = 0; k <= i41; k++) {
       ib++;
       idx4[ib] = k + 1;
       x4[ib] = PerceptionSmartLoaderTLSThread->u1.f0.x_data[k];
@@ -6486,23 +6654,23 @@ static void c_sortIdx(float x_data[], int x_size[1], int idx_data[], int
 
       for (k = 0; k <= ib; k++) {
         i3 = perm[k] - 1;
-        i4 = (i45 - ib) + k;
+        i4 = (i41 - ib) + k;
         PerceptionSmartLoaderTLSThread->u1.f0.idx_data[i4] = idx4[i3];
         PerceptionSmartLoaderTLSThread->u1.f0.x_data[i4] = x4[i3];
       }
     }
 
     ib = 2;
-    if (i44 > 1) {
-      if (i44 >= 256) {
-        ib = i44 >> 8;
+    if (i40 > 1) {
+      if (i40 >= 256) {
+        ib = i40 >> 8;
         for (i1 = 0; i1 < ib; i1++) {
           merge_pow2_block(PerceptionSmartLoaderTLSThread->u1.f0.idx_data,
                            PerceptionSmartLoaderTLSThread->u1.f0.x_data, i1 << 8);
         }
 
         ib <<= 8;
-        i1 = i44 - ib;
+        i1 = i40 - ib;
         if (i1 > 0) {
           merge_block(PerceptionSmartLoaderTLSThread->u1.f0.idx_data,
                       PerceptionSmartLoaderTLSThread->u1.f0.x_data, ib, i1, 2,
@@ -6514,7 +6682,7 @@ static void c_sortIdx(float x_data[], int x_size[1], int idx_data[], int
       }
 
       merge_block(PerceptionSmartLoaderTLSThread->u1.f0.idx_data,
-                  PerceptionSmartLoaderTLSThread->u1.f0.x_data, 0, i44, ib,
+                  PerceptionSmartLoaderTLSThread->u1.f0.x_data, 0, i40, ib,
                   PerceptionSmartLoaderTLSThread->u1.f0.iwork_data,
                   PerceptionSmartLoaderTLSThread->u1.f0.xwork_data);
     }
@@ -6778,6 +6946,39 @@ static int countEmpty(int empties[2], const int counts[2], const int changed[2],
 }
 
 //
+// Arguments    : const double x[2]
+// Return Type  : double
+//
+static double d_norm(const double x[2])
+{
+  double y;
+  double scale;
+  double absxk;
+  double t;
+  scale = 3.3121686421112381E-170;
+  absxk = std::abs(x[0]);
+  if (absxk > 3.3121686421112381E-170) {
+    y = 1.0;
+    scale = absxk;
+  } else {
+    t = absxk / 3.3121686421112381E-170;
+    y = t * t;
+  }
+
+  absxk = std::abs(x[1]);
+  if (absxk > scale) {
+    t = scale / absxk;
+    y = 1.0 + y * t * t;
+    scale = absxk;
+  } else {
+    t = absxk / scale;
+    y += t * t;
+  }
+
+  return scale * std::sqrt(y);
+}
+
+//
 // Arguments    : const float x_data[]
 //                const int x_size[2]
 //                float y_data[]
@@ -6818,7 +7019,7 @@ static void distfun(float D_data[], const float X_data[], const int X_size[2],
 {
   int n;
   int r;
-  int i54;
+  int i50;
   n = X_size[0] - 1;
   for (r = 0; r <= n; r++) {
     D_data[(crows + (r << 1)) - 1] = std::pow(X_data[3 * r] - C[3 * (crows - 1)],
@@ -6826,8 +7027,8 @@ static void distfun(float D_data[], const float X_data[], const int X_size[2],
   }
 
   for (r = 0; r <= n; r++) {
-    i54 = (crows + (r << 1)) - 1;
-    D_data[i54] += std::pow(X_data[3 * r + 1] - C[3 * (crows - 1) + 1], 2.0F);
+    i50 = (crows + (r << 1)) - 1;
+    D_data[i50] += std::pow(X_data[3 * r + 1] - C[3 * (crows - 1) + 1], 2.0F);
   }
 
   for (r = 0; r <= n; r++) {
@@ -6941,7 +7142,7 @@ static void eig(const double A[4], creal_T V[4], creal_T D[4])
   int k;
   double t;
   double ba;
-  int i31;
+  int i30;
   double s;
   double d;
   double cs;
@@ -7033,12 +7234,12 @@ static void eig(const double A[4], creal_T V[4], creal_T D[4])
         info = i << 1;
         scale = b_A[info];
         absxk = b_A[i];
-        i31 = i + info;
-        t = b_A[i31];
+        i30 = i + info;
+        t = b_A[i30];
         xdlanv2(&b_A[0], &scale, &absxk, &t, &colnorm, &ba, &s, &d, &cs, &sn);
         b_A[info] = scale;
         b_A[i] = absxk;
-        b_A[i31] = t;
+        b_A[i30] = t;
         if (2 > i + 1) {
           b_A[2] = cs * b_A[2] + sn * b_A[2];
         }
@@ -7386,7 +7587,7 @@ static int findchanged(PerceptionSmartLoaderStackData *SD, int changed[2], const
 {
   int nchanged;
   int j;
-  int i62;
+  int i58;
   if (0 <= moved_size[0] - 1) {
     memset(&SD->u1.f5.b_data[0], 0, (unsigned int)(moved_size[0] * (int)sizeof
             (boolean_T)));
@@ -7398,8 +7599,8 @@ static int findchanged(PerceptionSmartLoaderStackData *SD, int changed[2], const
   }
 
   nchanged = 0;
-  i62 = moved_size[0];
-  for (j = 0; j < i62; j++) {
+  i58 = moved_size[0];
+  for (j = 0; j < i58; j++) {
     if (SD->u1.f5.b_data[j]) {
       nchanged++;
       changed[nchanged - 1] = j + 1;
@@ -7424,41 +7625,41 @@ static void gcentroids(float C[6], int counts[2], const float X_data[], const
 {
   int n;
   int ic;
-  int i56;
+  int i52;
   int cc;
-  int i57;
-  int i58;
+  int i53;
+  int i54;
   int i;
   n = X_size[0];
   for (ic = 0; ic < nclusters; ic++) {
     counts[clusters[ic] - 1] = 0;
-    i56 = 3 * (clusters[ic] - 1);
-    C[i56] = 0.0F;
-    C[1 + i56] = 0.0F;
-    C[2 + i56] = 0.0F;
+    i52 = 3 * (clusters[ic] - 1);
+    C[i52] = 0.0F;
+    C[1 + i52] = 0.0F;
+    C[2 + i52] = 0.0F;
   }
 
   for (ic = 0; ic < nclusters; ic++) {
     cc = 0;
-    i56 = 3 * (clusters[ic] - 1);
-    C[i56] = 0.0F;
-    i57 = 1 + i56;
-    C[i57] = 0.0F;
-    i58 = 2 + i56;
-    C[i58] = 0.0F;
+    i52 = 3 * (clusters[ic] - 1);
+    C[i52] = 0.0F;
+    i53 = 1 + i52;
+    C[i53] = 0.0F;
+    i54 = 2 + i52;
+    C[i54] = 0.0F;
     for (i = 0; i < n; i++) {
       if (idx_data[i] == clusters[ic]) {
         cc++;
-        C[i56] += X_data[3 * i];
-        C[i57] += X_data[1 + 3 * i];
-        C[i58] += X_data[2 + 3 * i];
+        C[i52] += X_data[3 * i];
+        C[i53] += X_data[1 + 3 * i];
+        C[i54] += X_data[2 + 3 * i];
       }
     }
 
     counts[clusters[ic] - 1] = cc;
-    C[i56] /= (float)cc;
-    C[i57] /= (float)cc;
-    C[i58] /= (float)cc;
+    C[i52] /= (float)cc;
+    C[i53] /= (float)cc;
+    C[i54] /= (float)cc;
   }
 }
 
@@ -7590,7 +7791,7 @@ static void inpolygon(const float x_data[], const int x_size[1], const float
   signed char last[4];
   double minxv;
   double maxxv;
-  int i24;
+  int i23;
   int j;
   double minyv;
   double a;
@@ -7629,8 +7830,8 @@ static void inpolygon(const float x_data[], const int x_size[1], const float
 
     minxv = xv[0];
     maxxv = xv[0];
-    i24 = last[0];
-    for (j = 1; j <= i24; j++) {
+    i23 = last[0];
+    for (j = 1; j <= i23; j++) {
       a = xv[j - 1];
       if (a < minxv) {
         minxv = a;
@@ -7643,8 +7844,8 @@ static void inpolygon(const float x_data[], const int x_size[1], const float
 
     minyv = yv[0];
     maxyv = yv[0];
-    i24 = last[0];
-    for (j = 1; j <= i24; j++) {
+    i23 = last[0];
+    for (j = 1; j <= i23; j++) {
       a = yv[j - 1];
       if (a < minyv) {
         minyv = a;
@@ -7659,9 +7860,9 @@ static void inpolygon(const float x_data[], const int x_size[1], const float
     scale[1] = 0.0;
     scale[2] = 0.0;
     scale[3] = 0.0;
-    i24 = last[0] - 1;
-    a = std::abs(0.5 * (xv[i24] + xv[0]));
-    b = std::abs(0.5 * (yv[i24] + yv[0]));
+    i23 = last[0] - 1;
+    a = std::abs(0.5 * (xv[i23] + xv[0]));
+    b = std::abs(0.5 * (yv[i23] + yv[0]));
     if ((a > 1.0) && (b > 1.0)) {
       a *= b;
     } else {
@@ -7670,7 +7871,7 @@ static void inpolygon(const float x_data[], const int x_size[1], const float
       }
     }
 
-    for (j = 1; j <= i24; j++) {
+    for (j = 1; j <= i23; j++) {
       b_a = std::abs(0.5 * (xv[j - 1] + xv[j]));
       b = std::abs(0.5 * (yv[j - 1] + yv[j]));
       if ((b_a > 1.0) && (b > 1.0)) {
@@ -7684,7 +7885,7 @@ static void inpolygon(const float x_data[], const int x_size[1], const float
       scale[j - 1] = b_a * 6.6613381477509392E-16;
     }
 
-    scale[i24] = a * 6.6613381477509392E-16;
+    scale[i23] = a * 6.6613381477509392E-16;
     j = x_size[0] - 1;
 
 #pragma omp parallel for \
@@ -8260,17 +8461,11 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
                       const int X_size[2], const emxArray_real_T *Y,
                       emxArray_real_T *Idx)
 {
-  int tmp_size[2];
-  int b_tmp_size[1];
+  emxArray_int32_T *y;
   int loop_ub;
-  int y_size_idx_1;
   int upperBoundsTemp_data_tmp;
-  int iv0[2];
-  int nx;
+  int m;
   double M;
-  int idx;
-  int ii;
-  boolean_T exitg1;
   int lowerBoundsTemp_size[2];
   boolean_T leafNodeTemp_data[32767];
   emxArray_cell_wrap_13 *idxTemp;
@@ -8284,149 +8479,39 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
   float minval_idx_1;
   int iidx;
   int x_size[1];
+  int iidx_size[1];
   double d0;
   int half;
+  int b_upperBoundsTemp_data_tmp;
   double temp[2];
   boolean_T cgstruct_leafNode_data[32767];
   emxArray_real32_T *D;
-  tmp_size[1] = 2;
-  tmp_size[0] = X_size[0];
-  b_any(tmp_size, SD->u6.f21.c_tmp_data, b_tmp_size);
+  emxInit_int32_T(&y, 2);
   if (X_size[0] < 1) {
-    y_size_idx_1 = 0;
+    y->size[1] = 0;
+    y->size[0] = 1;
   } else {
     loop_ub = X_size[0];
-    y_size_idx_1 = X_size[0];
+    upperBoundsTemp_data_tmp = y->size[0] * y->size[1];
+    y->size[1] = X_size[0];
+    y->size[0] = 1;
+    emxEnsureCapacity_int32_T(y, upperBoundsTemp_data_tmp);
     for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
          upperBoundsTemp_data_tmp++) {
-      SD->u6.f21.y_data[upperBoundsTemp_data_tmp] = 1 + upperBoundsTemp_data_tmp;
+      y->data[upperBoundsTemp_data_tmp] = 1 + upperBoundsTemp_data_tmp;
     }
   }
 
-  if (0 <= y_size_idx_1 - 1) {
-    memcpy(&SD->u6.f21.notnan_data[0], &SD->u6.f21.y_data[0], (unsigned int)
-           (y_size_idx_1 * (int)sizeof(int)));
+  m = y->size[1];
+  loop_ub = y->size[1] * y->size[0];
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
+       upperBoundsTemp_data_tmp++) {
+    SD->u6.f21.notnan_data[upperBoundsTemp_data_tmp] = y->
+      data[upperBoundsTemp_data_tmp];
   }
 
-  iv0[0] = 1;
-  iv0[1] = b_tmp_size[0];
-  if (c_any(SD->u6.f21.c_tmp_data, iv0)) {
-    loop_ub = b_tmp_size[0];
-    for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
-         upperBoundsTemp_data_tmp++) {
-      SD->u6.f21.b_x_data[upperBoundsTemp_data_tmp] = !SD->
-        u6.f21.c_tmp_data[upperBoundsTemp_data_tmp];
-    }
-
-    nx = b_tmp_size[0];
-    idx = 0;
-    loop_ub = b_tmp_size[0];
-    ii = 0;
-    exitg1 = false;
-    while ((!exitg1) && (ii <= nx - 1)) {
-      if (SD->u6.f21.b_x_data[ii]) {
-        idx++;
-        SD->u6.f21.ii_data[idx - 1] = ii + 1;
-        if (idx >= nx) {
-          exitg1 = true;
-        } else {
-          ii++;
-        }
-      } else {
-        ii++;
-      }
-    }
-
-    if (b_tmp_size[0] == 1) {
-      if (idx == 0) {
-        loop_ub = 0;
-      }
-    } else {
-      if (1 > idx) {
-        loop_ub = 0;
-      } else {
-        loop_ub = idx;
-      }
-
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
-           upperBoundsTemp_data_tmp++) {
-        SD->u6.f21.iidx_data[upperBoundsTemp_data_tmp] =
-          upperBoundsTemp_data_tmp;
-      }
-
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
-           upperBoundsTemp_data_tmp++) {
-        SD->u6.f21.b_ii_data[upperBoundsTemp_data_tmp] = SD->u6.f21.ii_data
-          [SD->u6.f21.iidx_data[upperBoundsTemp_data_tmp]];
-      }
-
-      if (0 <= loop_ub - 1) {
-        memcpy(&SD->u6.f21.ii_data[0], &SD->u6.f21.b_ii_data[0], (unsigned int)
-               (loop_ub * (int)sizeof(int)));
-      }
-    }
-
-    y_size_idx_1 = loop_ub;
-    if (0 <= loop_ub - 1) {
-      memcpy(&SD->u6.f21.notnan_data[0], &SD->u6.f21.ii_data[0], (unsigned int)
-             (loop_ub * (int)sizeof(int)));
-    }
-
-    nx = b_tmp_size[0];
-    idx = 0;
-    loop_ub = b_tmp_size[0];
-    ii = 0;
-    exitg1 = false;
-    while ((!exitg1) && (ii <= nx - 1)) {
-      if (SD->u6.f21.c_tmp_data[ii]) {
-        idx++;
-        SD->u6.f21.ii_data[idx - 1] = ii + 1;
-        if (idx >= nx) {
-          exitg1 = true;
-        } else {
-          ii++;
-        }
-      } else {
-        ii++;
-      }
-    }
-
-    if (b_tmp_size[0] == 1) {
-      if (idx == 0) {
-        loop_ub = 0;
-      }
-    } else {
-      if (1 > idx) {
-        loop_ub = 0;
-      } else {
-        loop_ub = idx;
-      }
-
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
-           upperBoundsTemp_data_tmp++) {
-        SD->u6.f21.iidx_data[upperBoundsTemp_data_tmp] =
-          upperBoundsTemp_data_tmp;
-      }
-
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
-           upperBoundsTemp_data_tmp++) {
-        SD->u6.f21.b_ii_data[upperBoundsTemp_data_tmp] = SD->u6.f21.ii_data
-          [SD->u6.f21.iidx_data[upperBoundsTemp_data_tmp]];
-      }
-
-      if (0 <= loop_ub - 1) {
-        memcpy(&SD->u6.f21.ii_data[0], &SD->u6.f21.b_ii_data[0], (unsigned int)
-               (loop_ub * (int)sizeof(int)));
-      }
-    }
-
-    nx = y_size_idx_1;
-  } else {
-    nx = X_size[0];
-    loop_ub = 0;
-  }
-
-  M = (double)nx / 50.0;
+  emxFree_int32_T(&y);
+  M = (double)X_size[0] / 50.0;
   if (M <= 1.0) {
     M = 1.0;
   }
@@ -8434,64 +8519,65 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
   M = b_log2(M);
   M = std::ceil(M);
   M = mpower(M + 1.0) - 1.0;
-  idx = (int)M;
-  if (0 <= idx - 1) {
-    memset(&SD->u6.f21.cutDimTemp_data[0], 0, (unsigned int)(idx * (int)sizeof
-            (int)));
+  loop_ub = (int)M;
+  if (0 <= loop_ub - 1) {
+    memset(&SD->u6.f21.cutDimTemp_data[0], 0, (unsigned int)(loop_ub * (int)
+            sizeof(int)));
   }
 
-  idx = (int)M;
-  if (0 <= idx - 1) {
-    memset(&SD->u6.f21.cutValTemp_data[0], 0, (unsigned int)(idx * (int)sizeof
-            (double)));
+  loop_ub = (int)M;
+  if (0 <= loop_ub - 1) {
+    memset(&SD->u6.f21.cutValTemp_data[0], 0, (unsigned int)(loop_ub * (int)
+            sizeof(double)));
   }
 
   lowerBoundsTemp_size[0] = (int)M;
-  idx = 2 * lowerBoundsTemp_size[0];
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = 2 * lowerBoundsTemp_size[0];
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     SD->u6.f21.lowerBoundsTemp_data[upperBoundsTemp_data_tmp] =
       1.7976931348623157E+308;
   }
 
-  idx = (lowerBoundsTemp_size[0] << 1) - 1;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp <= idx;
+  loop_ub = (lowerBoundsTemp_size[0] << 1) - 1;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp <= loop_ub;
        upperBoundsTemp_data_tmp++) {
     SD->u6.f21.lowerBoundsTemp_data[upperBoundsTemp_data_tmp] =
       -SD->u6.f21.lowerBoundsTemp_data[upperBoundsTemp_data_tmp];
   }
 
-  idx = 2 * (int)M;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = 2 * (int)M;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     SD->u6.f21.upperBoundsTemp_data[upperBoundsTemp_data_tmp] =
       1.7976931348623157E+308;
   }
 
-  idx = (int)M;
-  if (0 <= idx - 1) {
-    memset(&SD->u6.f21.leftChildTemp_data[0], 0, (unsigned int)(idx * (int)
+  loop_ub = (int)M;
+  if (0 <= loop_ub - 1) {
+    memset(&SD->u6.f21.leftChildTemp_data[0], 0, (unsigned int)(loop_ub * (int)
             sizeof(double)));
   }
 
-  idx = (int)M;
-  if (0 <= idx - 1) {
-    memset(&SD->u6.f21.rightChildTemp_data[0], 0, (unsigned int)(idx * (int)
+  loop_ub = (int)M;
+  if (0 <= loop_ub - 1) {
+    memset(&SD->u6.f21.rightChildTemp_data[0], 0, (unsigned int)(loop_ub * (int)
             sizeof(double)));
   }
 
-  idx = (int)M;
-  if (0 <= idx - 1) {
-    memset(&leafNodeTemp_data[0], 0, (unsigned int)(idx * (int)sizeof(boolean_T)));
+  loop_ub = (int)M;
+  if (0 <= loop_ub - 1) {
+    memset(&leafNodeTemp_data[0], 0, (unsigned int)(loop_ub * (int)sizeof
+            (boolean_T)));
   }
 
   emxInit_cell_wrap_13(&idxTemp, 1);
   upperBoundsTemp_data_tmp = idxTemp->size[0];
   idxTemp->size[0] = (int)M;
   emxEnsureCapacity_cell_wrap_13(idxTemp, upperBoundsTemp_data_tmp);
-  idxTemp->data[0].f1.size[1] = y_size_idx_1;
+  idxTemp->data[0].f1.size[1] = m;
   idxTemp->data[0].f1.size[0] = 1;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < y_size_idx_1;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < m;
        upperBoundsTemp_data_tmp++) {
     idxTemp->data[0].f1.data[upperBoundsTemp_data_tmp] = SD->
       u6.f21.notnan_data[upperBoundsTemp_data_tmp];
@@ -8503,56 +8589,57 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
     if (idxTemp->data[currentNode].f1.size[1] <= 50) {
       leafNodeTemp_data[currentNode] = true;
     } else {
-      idx = idxTemp->data[currentNode].f1.size[1];
+      m = idxTemp->data[currentNode].f1.size[1];
       p = X_data[((int)idxTemp->data[currentNode].f1.data[0] - 1) << 1];
       maxval_idx_1 = X_data[1 + (((int)idxTemp->data[currentNode].f1.data[0] - 1)
         << 1)];
-      for (ii = 2; ii <= idx; ii++) {
-        if (p < X_data[((int)idxTemp->data[currentNode].f1.data[ii - 1] - 1) <<
-            1]) {
-          p = X_data[((int)idxTemp->data[currentNode].f1.data[ii - 1] - 1) << 1];
+      for (loop_ub = 2; loop_ub <= m; loop_ub++) {
+        if (p < X_data[((int)idxTemp->data[currentNode].f1.data[loop_ub - 1] - 1)
+            << 1]) {
+          p = X_data[((int)idxTemp->data[currentNode].f1.data[loop_ub - 1] - 1) <<
+            1];
         }
 
         if (maxval_idx_1 < X_data[1 + (((int)idxTemp->data[currentNode]
-              .f1.data[ii - 1] - 1) << 1)]) {
-          maxval_idx_1 = X_data[1 + (((int)idxTemp->data[currentNode].f1.data[ii
-            - 1] - 1) << 1)];
+              .f1.data[loop_ub - 1] - 1) << 1)]) {
+          maxval_idx_1 = X_data[1 + (((int)idxTemp->data[currentNode]
+            .f1.data[loop_ub - 1] - 1) << 1)];
         }
       }
 
-      idx = idxTemp->data[currentNode].f1.size[1];
+      m = idxTemp->data[currentNode].f1.size[1];
       minval_idx_0 = X_data[((int)idxTemp->data[currentNode].f1.data[0] - 1) <<
         1];
       minval_idx_1 = X_data[1 + (((int)idxTemp->data[currentNode].f1.data[0] - 1)
         << 1)];
-      for (ii = 2; ii <= idx; ii++) {
-        if (minval_idx_0 > X_data[((int)idxTemp->data[currentNode].f1.data[ii -
-             1] - 1) << 1]) {
-          minval_idx_0 = X_data[((int)idxTemp->data[currentNode].f1.data[ii - 1]
-            - 1) << 1];
+      for (loop_ub = 2; loop_ub <= m; loop_ub++) {
+        if (minval_idx_0 > X_data[((int)idxTemp->data[currentNode]
+             .f1.data[loop_ub - 1] - 1) << 1]) {
+          minval_idx_0 = X_data[((int)idxTemp->data[currentNode].f1.data[loop_ub
+            - 1] - 1) << 1];
         }
 
         if (minval_idx_1 > X_data[1 + (((int)idxTemp->data[currentNode]
-              .f1.data[ii - 1] - 1) << 1)]) {
-          minval_idx_1 = X_data[1 + (((int)idxTemp->data[currentNode].f1.data[ii
-            - 1] - 1) << 1)];
+              .f1.data[loop_ub - 1] - 1) << 1)]) {
+          minval_idx_1 = X_data[1 + (((int)idxTemp->data[currentNode]
+            .f1.data[loop_ub - 1] - 1) << 1)];
         }
       }
 
       p -= minval_idx_0;
       maxval_idx_1 -= minval_idx_1;
       iidx = (p < maxval_idx_1);
-      idx = idxTemp->data[currentNode].f1.size[1];
-      x_size[0] = idx;
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+      m = idxTemp->data[currentNode].f1.size[1];
+      x_size[0] = m;
+      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < m;
            upperBoundsTemp_data_tmp++) {
         SD->u6.f21.x_data[upperBoundsTemp_data_tmp] = X_data[iidx + (((int)
           idxTemp->data[currentNode].f1.data[upperBoundsTemp_data_tmp] - 1) << 1)];
       }
 
-      sort(SD->u6.f21.x_data, x_size, SD->u6.f21.iidx_data, b_tmp_size);
-      idx = b_tmp_size[0];
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+      sort(SD->u6.f21.x_data, x_size, SD->u6.f21.iidx_data, iidx_size);
+      loop_ub = iidx_size[0];
+      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
            upperBoundsTemp_data_tmp++) {
         SD->u6.f21.tmp_data[upperBoundsTemp_data_tmp] = (int)idxTemp->
           data[currentNode].f1.data[SD->
@@ -8566,28 +8653,28 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
       M = nextUnusedNode + 1;
       SD->u6.f21.leftChildTemp_data[currentNode] = M;
       SD->u6.f21.rightChildTemp_data[currentNode] = M + 1.0;
-      idx = currentNode << 1;
-      temp[0] = SD->u6.f21.upperBoundsTemp_data[idx];
-      ii = 1 + idx;
-      M = SD->u6.f21.upperBoundsTemp_data[ii];
-      temp[1] = SD->u6.f21.upperBoundsTemp_data[ii];
-      y_size_idx_1 = (nextUnusedNode + 1) << 1;
-      SD->u6.f21.upperBoundsTemp_data[y_size_idx_1] =
-        SD->u6.f21.upperBoundsTemp_data[idx];
-      loop_ub_tmp = 1 + y_size_idx_1;
+      m = currentNode << 1;
+      temp[0] = SD->u6.f21.upperBoundsTemp_data[m];
+      loop_ub = 1 + m;
+      M = SD->u6.f21.upperBoundsTemp_data[loop_ub];
+      temp[1] = SD->u6.f21.upperBoundsTemp_data[loop_ub];
+      b_upperBoundsTemp_data_tmp = (nextUnusedNode + 1) << 1;
+      SD->u6.f21.upperBoundsTemp_data[b_upperBoundsTemp_data_tmp] =
+        SD->u6.f21.upperBoundsTemp_data[m];
+      loop_ub_tmp = 1 + b_upperBoundsTemp_data_tmp;
       SD->u6.f21.upperBoundsTemp_data[loop_ub_tmp] = M;
       temp[iidx] = p;
       SD->u6.f21.upperBoundsTemp_data[nextUnusedNode << 1] = temp[0];
       temp[0] = SD->u6.f21.lowerBoundsTemp_data[currentNode << 1];
       upperBoundsTemp_data_tmp = 1 + (nextUnusedNode << 1);
       SD->u6.f21.upperBoundsTemp_data[upperBoundsTemp_data_tmp] = temp[1];
-      M = SD->u6.f21.lowerBoundsTemp_data[ii];
+      M = SD->u6.f21.lowerBoundsTemp_data[loop_ub];
       temp[1] = SD->u6.f21.lowerBoundsTemp_data[1 + (currentNode << 1)];
       SD->u6.f21.lowerBoundsTemp_data[nextUnusedNode << 1] =
-        SD->u6.f21.lowerBoundsTemp_data[idx];
+        SD->u6.f21.lowerBoundsTemp_data[m];
       SD->u6.f21.lowerBoundsTemp_data[upperBoundsTemp_data_tmp] = M;
       temp[iidx] = p;
-      SD->u6.f21.lowerBoundsTemp_data[y_size_idx_1] = temp[0];
+      SD->u6.f21.lowerBoundsTemp_data[b_upperBoundsTemp_data_tmp] = temp[0];
       SD->u6.f21.lowerBoundsTemp_data[loop_ub_tmp] = temp[1];
       idxTemp->data[currentNode].f1.size[1] = 0;
       idxTemp->data[currentNode].f1.size[0] = 1;
@@ -8605,23 +8692,24 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
           SD->u6.f21.tmp_data[SD->u6.f21.b_tmp_data[upperBoundsTemp_data_tmp]];
       }
 
-      if (half + 1 > b_tmp_size[0]) {
+      if (half + 1 > iidx_size[0]) {
         upperBoundsTemp_data_tmp = 1;
-        y_size_idx_1 = 0;
+        b_upperBoundsTemp_data_tmp = 0;
       } else {
         upperBoundsTemp_data_tmp = half + 1;
-        y_size_idx_1 = b_tmp_size[0];
+        b_upperBoundsTemp_data_tmp = iidx_size[0];
       }
 
-      idx = (y_size_idx_1 - upperBoundsTemp_data_tmp) + 1;
-      for (y_size_idx_1 = 0; y_size_idx_1 < idx; y_size_idx_1++) {
-        SD->u6.f21.iidx_data[y_size_idx_1] = (upperBoundsTemp_data_tmp +
-          y_size_idx_1) - 1;
+      m = (b_upperBoundsTemp_data_tmp - upperBoundsTemp_data_tmp) + 1;
+      for (b_upperBoundsTemp_data_tmp = 0; b_upperBoundsTemp_data_tmp < m;
+           b_upperBoundsTemp_data_tmp++) {
+        SD->u6.f21.iidx_data[b_upperBoundsTemp_data_tmp] =
+          (upperBoundsTemp_data_tmp + b_upperBoundsTemp_data_tmp) - 1;
       }
 
-      idxTemp->data[nextUnusedNode + 1].f1.size[1] = idx;
+      idxTemp->data[nextUnusedNode + 1].f1.size[1] = m;
       idxTemp->data[nextUnusedNode + 1].f1.size[0] = 1;
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < m;
            upperBoundsTemp_data_tmp++) {
         idxTemp->data[nextUnusedNode + 1].f1.data[upperBoundsTemp_data_tmp] =
           SD->u6.f21.tmp_data[SD->u6.f21.iidx_data[upperBoundsTemp_data_tmp]];
@@ -8636,48 +8724,44 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
   loop_ub_tmp = (short)nextUnusedNode - 1;
   for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp <= loop_ub_tmp;
        upperBoundsTemp_data_tmp++) {
-    SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp] = (short)
+    SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp] = (short)
       upperBoundsTemp_data_tmp;
   }
 
-  idx = (short)nextUnusedNode;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = (short)nextUnusedNode;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     cgstruct_cutDim_data[upperBoundsTemp_data_tmp] = (signed char)
-      SD->u6.f21.cutDimTemp_data[SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp]];
+      SD->u6.f21.cutDimTemp_data[SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp]];
   }
 
   for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp <= loop_ub_tmp;
        upperBoundsTemp_data_tmp++) {
-    SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp] = (short)
+    SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp] = (short)
       upperBoundsTemp_data_tmp;
   }
 
-  idx = (short)nextUnusedNode;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = (short)nextUnusedNode;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     SD->u6.f21.cgstruct_cutVal_data[upperBoundsTemp_data_tmp] =
-      SD->u6.f21.cutValTemp_data[SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp]];
+      SD->u6.f21.cutValTemp_data[SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp]];
   }
 
   for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < nextUnusedNode;
        upperBoundsTemp_data_tmp++) {
-    idx = upperBoundsTemp_data_tmp << 1;
-    SD->u6.f21.cgstruct_lowerBounds_data[idx] = SD->
-      u6.f21.lowerBoundsTemp_data[idx];
-    idx++;
-    SD->u6.f21.cgstruct_lowerBounds_data[idx] = SD->
-      u6.f21.lowerBoundsTemp_data[idx];
+    m = upperBoundsTemp_data_tmp << 1;
+    SD->u6.f21.cgstruct_lowerBounds_data[m] = SD->u6.f21.lowerBoundsTemp_data[m];
+    m++;
+    SD->u6.f21.cgstruct_lowerBounds_data[m] = SD->u6.f21.lowerBoundsTemp_data[m];
   }
 
   for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < nextUnusedNode;
        upperBoundsTemp_data_tmp++) {
-    idx = upperBoundsTemp_data_tmp << 1;
-    SD->u6.f21.cgstruct_upperBounds_data[idx] = SD->
-      u6.f21.upperBoundsTemp_data[idx];
-    idx++;
-    SD->u6.f21.cgstruct_upperBounds_data[idx] = SD->
-      u6.f21.upperBoundsTemp_data[idx];
+    m = upperBoundsTemp_data_tmp << 1;
+    SD->u6.f21.cgstruct_upperBounds_data[m] = SD->u6.f21.upperBoundsTemp_data[m];
+    m++;
+    SD->u6.f21.cgstruct_upperBounds_data[m] = SD->u6.f21.upperBoundsTemp_data[m];
   }
 
   if (0 <= X_size[0] - 1) {
@@ -8686,28 +8770,29 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
   }
 
   M = 1.0;
-  for (idx = 0; idx < nextUnusedNode; idx++) {
-    SD->u6.f21.cutDimTemp_data[idx] = idxTemp->data[idx].f1.size[1];
-    if (SD->u6.f21.cutDimTemp_data[idx] > 0) {
-      d0 = M + (double)SD->u6.f21.cutDimTemp_data[idx];
+  for (m = 0; m < nextUnusedNode; m++) {
+    SD->u6.f21.cutDimTemp_data[m] = idxTemp->data[m].f1.size[1];
+    if (SD->u6.f21.cutDimTemp_data[m] > 0) {
+      d0 = M + (double)SD->u6.f21.cutDimTemp_data[m];
       if (M > d0 - 1.0) {
         upperBoundsTemp_data_tmp = 0;
-        y_size_idx_1 = 0;
+        b_upperBoundsTemp_data_tmp = 0;
       } else {
         upperBoundsTemp_data_tmp = (int)M - 1;
-        y_size_idx_1 = (int)(d0 - 1.0);
+        b_upperBoundsTemp_data_tmp = (int)(d0 - 1.0);
       }
 
-      ii = y_size_idx_1 - upperBoundsTemp_data_tmp;
-      for (y_size_idx_1 = 0; y_size_idx_1 < ii; y_size_idx_1++) {
-        SD->u6.f21.iidx_data[y_size_idx_1] = upperBoundsTemp_data_tmp +
-          y_size_idx_1;
+      loop_ub = b_upperBoundsTemp_data_tmp - upperBoundsTemp_data_tmp;
+      for (b_upperBoundsTemp_data_tmp = 0; b_upperBoundsTemp_data_tmp < loop_ub;
+           b_upperBoundsTemp_data_tmp++) {
+        SD->u6.f21.iidx_data[b_upperBoundsTemp_data_tmp] =
+          upperBoundsTemp_data_tmp + b_upperBoundsTemp_data_tmp;
       }
 
-      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < ii;
+      for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
            upperBoundsTemp_data_tmp++) {
         SD->u6.f21.tempIdx_data[SD->u6.f21.iidx_data[upperBoundsTemp_data_tmp]] =
-          (unsigned int)idxTemp->data[idx].f1.data[upperBoundsTemp_data_tmp];
+          (unsigned int)idxTemp->data[m].f1.data[upperBoundsTemp_data_tmp];
       }
 
       M = d0;
@@ -8717,43 +8802,43 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
   emxFree_cell_wrap_13(&idxTemp);
   for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp <= loop_ub_tmp;
        upperBoundsTemp_data_tmp++) {
-    SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp] = (short)
+    SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp] = (short)
       upperBoundsTemp_data_tmp;
   }
 
-  idx = (short)nextUnusedNode;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = (short)nextUnusedNode;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     SD->u6.f21.cgstruct_leftChild_data[upperBoundsTemp_data_tmp] =
       SD->u6.f21.leftChildTemp_data[SD->
-      u6.f21.d_tmp_data[upperBoundsTemp_data_tmp]];
+      u6.f21.c_tmp_data[upperBoundsTemp_data_tmp]];
   }
 
   for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp <= loop_ub_tmp;
        upperBoundsTemp_data_tmp++) {
-    SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp] = (short)
+    SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp] = (short)
       upperBoundsTemp_data_tmp;
   }
 
-  idx = (short)nextUnusedNode;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = (short)nextUnusedNode;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     SD->u6.f21.cutValTemp_data[upperBoundsTemp_data_tmp] =
       SD->u6.f21.rightChildTemp_data[SD->
-      u6.f21.d_tmp_data[upperBoundsTemp_data_tmp]];
+      u6.f21.c_tmp_data[upperBoundsTemp_data_tmp]];
   }
 
   for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp <= loop_ub_tmp;
        upperBoundsTemp_data_tmp++) {
-    SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp] = (short)
+    SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp] = (short)
       upperBoundsTemp_data_tmp;
   }
 
-  idx = (short)nextUnusedNode;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = (short)nextUnusedNode;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     cgstruct_leafNode_data[upperBoundsTemp_data_tmp] = leafNodeTemp_data
-      [SD->u6.f21.d_tmp_data[upperBoundsTemp_data_tmp]];
+      [SD->u6.f21.c_tmp_data[upperBoundsTemp_data_tmp]];
   }
 
   SD->u6.f21.expl_temp.idxDim.size[0] = nextUnusedNode;
@@ -8769,26 +8854,27 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
            (unsigned int)(X_size[0] * (int)sizeof(unsigned int)));
   }
 
-  SD->u6.f21.expl_temp.nx_nonan = nx;
+  SD->u6.f21.expl_temp.nx_nonan = X_size[0];
   SD->u6.f21.expl_temp.leafNode.size[0] = (short)nextUnusedNode;
-  idx = (short)nextUnusedNode;
-  if (0 <= idx - 1) {
+  loop_ub = (short)nextUnusedNode;
+  if (0 <= loop_ub - 1) {
     memcpy(&SD->u6.f21.expl_temp.leafNode.data[0], &cgstruct_leafNode_data[0],
-           (unsigned int)(idx * (int)sizeof(boolean_T)));
+           (unsigned int)(loop_ub * (int)sizeof(boolean_T)));
   }
 
   SD->u6.f21.expl_temp.rightChild.size[0] = (short)nextUnusedNode;
-  idx = (short)nextUnusedNode;
-  if (0 <= idx - 1) {
+  loop_ub = (short)nextUnusedNode;
+  if (0 <= loop_ub - 1) {
     memcpy(&SD->u6.f21.expl_temp.rightChild.data[0], &SD->
-           u6.f21.cutValTemp_data[0], (unsigned int)(idx * (int)sizeof(double)));
+           u6.f21.cutValTemp_data[0], (unsigned int)(loop_ub * (int)sizeof
+            (double)));
   }
 
   SD->u6.f21.expl_temp.leftChild.size[0] = (short)nextUnusedNode;
-  idx = (short)nextUnusedNode;
-  if (0 <= idx - 1) {
+  loop_ub = (short)nextUnusedNode;
+  if (0 <= loop_ub - 1) {
     memcpy(&SD->u6.f21.expl_temp.leftChild.data[0],
-           &SD->u6.f21.cgstruct_leftChild_data[0], (unsigned int)(idx * (int)
+           &SD->u6.f21.cgstruct_leftChild_data[0], (unsigned int)(loop_ub * (int)
             sizeof(double)));
   }
 
@@ -8810,30 +8896,24 @@ static void knnsearch(PerceptionSmartLoaderStackData *SD, const float X_data[],
   }
 
   SD->u6.f21.expl_temp.cutVal.size[0] = (short)nextUnusedNode;
-  idx = (short)nextUnusedNode;
-  if (0 <= idx - 1) {
+  loop_ub = (short)nextUnusedNode;
+  if (0 <= loop_ub - 1) {
     memcpy(&SD->u6.f21.expl_temp.cutVal.data[0],
-           &SD->u6.f21.cgstruct_cutVal_data[0], (unsigned int)(idx * (int)sizeof
-            (double)));
+           &SD->u6.f21.cgstruct_cutVal_data[0], (unsigned int)(loop_ub * (int)
+            sizeof(double)));
   }
 
   SD->u6.f21.expl_temp.cutDim.size[0] = (short)nextUnusedNode;
-  idx = (short)nextUnusedNode;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < idx;
+  loop_ub = (short)nextUnusedNode;
+  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
        upperBoundsTemp_data_tmp++) {
     SD->u6.f21.expl_temp.cutDim.data[upperBoundsTemp_data_tmp] =
       cgstruct_cutDim_data[upperBoundsTemp_data_tmp];
   }
 
   SD->u6.f21.expl_temp.numNodes = nextUnusedNode;
-  SD->u6.f21.expl_temp.wasnanIdx.size[1] = loop_ub;
+  SD->u6.f21.expl_temp.wasnanIdx.size[1] = 0;
   SD->u6.f21.expl_temp.wasnanIdx.size[0] = 1;
-  for (upperBoundsTemp_data_tmp = 0; upperBoundsTemp_data_tmp < loop_ub;
-       upperBoundsTemp_data_tmp++) {
-    SD->u6.f21.expl_temp.wasnanIdx.data[upperBoundsTemp_data_tmp] =
-      SD->u6.f21.ii_data[upperBoundsTemp_data_tmp];
-  }
-
   SD->u6.f21.expl_temp.BucketSize = 50.0;
   SD->u6.f21.expl_temp.Distance[0] = 'e';
   SD->u6.f21.expl_temp.Distance[1] = 'u';
@@ -9269,15 +9349,15 @@ static void merge(int idx_data[], float x_data[], int offset, int np, int nq,
   int n_tmp;
   int iout;
   int p;
-  int i46;
+  int i42;
   int q;
   int exitg1;
   if (nq != 0) {
     n_tmp = np + nq;
     for (iout = 0; iout < n_tmp; iout++) {
-      i46 = offset + iout;
-      iwork_data[iout] = idx_data[i46];
-      xwork_data[iout] = x_data[i46];
+      i42 = offset + iout;
+      iwork_data[iout] = idx_data[i42];
+      xwork_data[iout] = x_data[i42];
     }
 
     p = 0;
@@ -9302,9 +9382,9 @@ static void merge(int idx_data[], float x_data[], int offset, int np, int nq,
         } else {
           q = iout - p;
           for (iout = p + 1; iout <= np; iout++) {
-            i46 = q + iout;
-            idx_data[i46] = iwork_data[iout - 1];
-            x_data[i46] = xwork_data[iout - 1];
+            i42 = q + iout;
+            idx_data[i42] = iwork_data[iout - 1];
+            x_data[i42] = xwork_data[iout - 1];
           }
 
           exitg1 = 1;
@@ -9782,18 +9862,18 @@ static int nonSingletonDim(const int x_size[1])
 }
 
 //
-// Arguments    : const cell_wrap_3 x_data[]
+// Arguments    : const cell_wrap_4 x_data[]
 //                const boolean_T idx_data[]
-//                cell_wrap_3 b_x_data[]
+//                cell_wrap_4 b_x_data[]
 //                int x_size[2]
 // Return Type  : void
 //
-static void nullAssignment(const cell_wrap_3 x_data[], const boolean_T idx_data[],
-  cell_wrap_3 b_x_data[], int x_size[2])
+static void nullAssignment(const cell_wrap_4 x_data[], const boolean_T idx_data[],
+  cell_wrap_4 b_x_data[], int x_size[2])
 {
   int n;
   int k;
-  int i17;
+  int i16;
   int bidx;
   int loop_ub;
   n = 0;
@@ -9801,13 +9881,13 @@ static void nullAssignment(const cell_wrap_3 x_data[], const boolean_T idx_data[
     n += idx_data[k];
   }
 
-  i17 = x_size[0] * x_size[1];
+  i16 = x_size[0] * x_size[1];
   x_size[1] = 64 - n;
   x_size[0] = 1;
-  emxEnsureCapacity_cell_wrap_3(b_x_data, x_size, i17);
+  emxEnsureCapacity_cell_wrap_4(b_x_data, x_size, i16);
   bidx = 0;
-  i17 = 63 - n;
-  for (k = 0; k <= i17; k++) {
+  i16 = 63 - n;
+  for (k = 0; k <= i16; k++) {
     while ((bidx + 1 <= 64) && idx_data[bidx]) {
       bidx++;
     }
@@ -9835,10 +9915,10 @@ static void pdist(const emxArray_real32_T *Xin, emxArray_real32_T *Y)
   emxArray_real32_T *X;
   int px;
   int nx;
-  int i18;
+  int i17;
   int loop_ub;
   int b_loop_ub;
-  int i19;
+  int i18;
   double d2;
   int kk;
   int jj;
@@ -9848,15 +9928,15 @@ static void pdist(const emxArray_real32_T *Xin, emxArray_real32_T *Y)
   emxInit_real32_T(&X, 2);
   px = Xin->size[1];
   nx = Xin->size[0];
-  i18 = X->size[0] * X->size[1];
+  i17 = X->size[0] * X->size[1];
   X->size[1] = Xin->size[0];
   X->size[0] = Xin->size[1];
-  emxEnsureCapacity_real32_T(X, i18);
+  emxEnsureCapacity_real32_T(X, i17);
   loop_ub = Xin->size[1];
-  for (i18 = 0; i18 < loop_ub; i18++) {
+  for (i17 = 0; i17 < loop_ub; i17++) {
     b_loop_ub = Xin->size[0];
-    for (i19 = 0; i19 < b_loop_ub; i19++) {
-      X->data[i19 + X->size[1] * i18] = Xin->data[i18 + Xin->size[1] * i19];
+    for (i18 = 0; i18 < b_loop_ub; i18++) {
+      X->data[i18 + X->size[1] * i17] = Xin->data[i17 + Xin->size[1] * i18];
     }
   }
 
@@ -9865,10 +9945,10 @@ static void pdist(const emxArray_real32_T *Xin, emxArray_real32_T *Y)
     Y->size[0] = 1;
   } else {
     loop_ub = Xin->size[0] * (Xin->size[0] - 1) / 2;
-    i18 = Y->size[0] * Y->size[1];
+    i17 = Y->size[0] * Y->size[1];
     Y->size[1] = loop_ub;
     Y->size[0] = 1;
-    emxEnsureCapacity_real32_T(Y, i18);
+    emxEnsureCapacity_real32_T(Y, i17);
     d2 = (double)Xin->size[0] * ((double)Xin->size[0] - 1.0) / 2.0;
     loop_ub = (int)d2 - 1;
 
@@ -9915,7 +9995,7 @@ static void pdist2(PerceptionSmartLoaderStackData *SD, const emxArray_real32_T
   int loop_ub;
   int Y_size[2];
   int b_loop_ub;
-  int i16;
+  int i15;
   unsigned int Xin_idx_0;
   int ii;
   int jj;
@@ -9929,9 +10009,9 @@ static void pdist2(PerceptionSmartLoaderStackData *SD, const emxArray_real32_T
   loop_ub = Xin->size[1];
   for (ub_loop = 0; ub_loop < loop_ub; ub_loop++) {
     b_loop_ub = Xin->size[0];
-    for (i16 = 0; i16 < b_loop_ub; i16++) {
-      X->data[i16 + X->size[1] * ub_loop] = Xin->data[ub_loop + Xin->size[1] *
-        i16];
+    for (i15 = 0; i15 < b_loop_ub; i15++) {
+      X->data[i15 + X->size[1] * ub_loop] = Xin->data[ub_loop + Xin->size[1] *
+        i15];
     }
   }
 
@@ -9990,7 +10070,7 @@ static int pivot(float v_data[], int *ip, int ia, int ib)
 {
   int reps;
   float vref;
-  int i63;
+  int i59;
   int k;
   float vk_tmp;
   vref = v_data[*ip - 1];
@@ -9998,8 +10078,8 @@ static int pivot(float v_data[], int *ip, int ia, int ib)
   v_data[ib - 1] = vref;
   *ip = ia;
   reps = 0;
-  i63 = ib - 1;
-  for (k = ia; k <= i63; k++) {
+  i59 = ib - 1;
+  for (k = ia; k <= i59; k++) {
     vk_tmp = v_data[k - 1];
     if (vk_tmp == vref) {
       v_data[k - 1] = v_data[*ip - 1];
@@ -10491,7 +10571,7 @@ static void search_node(const float X_data[], const float queryPt[2], const
 {
   int X_size[2];
   int loop_ub;
-  int i47;
+  int i43;
   int diffAllDim_size[2];
   int X_data_tmp;
   int b_diffAllDim_size[2];
@@ -10504,9 +10584,9 @@ static void search_node(const float X_data[], const float queryPt[2], const
   X_size[1] = 2;
   X_size[0] = node_idx_start_size[0];
   loop_ub = node_idx_start_size[0];
-  for (i47 = 0; i47 < loop_ub; i47++) {
-    X_data_tmp = ((int)node_idx_start_data[i47] - 1) << 1;
-    b_X_data_tmp = i47 << 1;
+  for (i43 = 0; i43 < loop_ub; i43++) {
+    X_data_tmp = ((int)node_idx_start_data[i43] - 1) << 1;
+    b_X_data_tmp = i43 << 1;
     PerceptionSmartLoaderTLSThread->u3.f4.X_data[b_X_data_tmp] =
       X_data[X_data_tmp];
     PerceptionSmartLoaderTLSThread->u3.f4.X_data[1 + b_X_data_tmp] = X_data[1 +
@@ -10518,10 +10598,10 @@ static void search_node(const float X_data[], const float queryPt[2], const
   b_diffAllDim_size[1] = 2;
   b_diffAllDim_size[0] = diffAllDim_size[0];
   loop_ub = diffAllDim_size[1] * diffAllDim_size[0];
-  for (i47 = 0; i47 < loop_ub; i47++) {
-    PerceptionSmartLoaderTLSThread->u3.f4.X_data[i47] =
-      PerceptionSmartLoaderTLSThread->u3.f4.diffAllDim_data[i47] *
-      PerceptionSmartLoaderTLSThread->u3.f4.diffAllDim_data[i47];
+  for (i43 = 0; i43 < loop_ub; i43++) {
+    PerceptionSmartLoaderTLSThread->u3.f4.X_data[i43] =
+      PerceptionSmartLoaderTLSThread->u3.f4.diffAllDim_data[i43] *
+      PerceptionSmartLoaderTLSThread->u3.f4.diffAllDim_data[i43];
   }
 
   b_sum(PerceptionSmartLoaderTLSThread->u3.f4.X_data, b_diffAllDim_size,
@@ -10546,39 +10626,39 @@ static void search_node(const float X_data[], const float queryPt[2], const
 
       pq->b_I.size[0] = aDistOut_size[0];
       loop_ub = aDistOut_size[0];
-      for (i47 = 0; i47 < loop_ub; i47++) {
-        pq->b_I.data[i47] = node_idx_start_data
-          [PerceptionSmartLoaderTLSThread->u3.f4.iidx_data[i47] - 1];
+      for (i43 = 0; i43 < loop_ub; i43++) {
+        pq->b_I.data[i43] = node_idx_start_data
+          [PerceptionSmartLoaderTLSThread->u3.f4.iidx_data[i43] - 1];
       }
     } else {
-      for (i47 = 0; i47 < numNN; i47++) {
-        PerceptionSmartLoaderTLSThread->u3.f4.c_tmp_data[i47] = i47;
+      for (i43 = 0; i43 < numNN; i43++) {
+        PerceptionSmartLoaderTLSThread->u3.f4.c_tmp_data[i43] = i43;
       }
 
       pq->D.size[0] = numNN;
-      for (i47 = 0; i47 < numNN; i47++) {
-        pq->D.data[i47] = PerceptionSmartLoaderTLSThread->
+      for (i43 = 0; i43 < numNN; i43++) {
+        pq->D.data[i43] = PerceptionSmartLoaderTLSThread->
           u3.f4.distInP_data[PerceptionSmartLoaderTLSThread->
-          u3.f4.c_tmp_data[i47]];
+          u3.f4.c_tmp_data[i43]];
       }
 
-      for (i47 = 0; i47 < numNN; i47++) {
-        PerceptionSmartLoaderTLSThread->u3.f4.c_tmp_data[i47] = i47;
+      for (i43 = 0; i43 < numNN; i43++) {
+        PerceptionSmartLoaderTLSThread->u3.f4.c_tmp_data[i43] = i43;
       }
 
       pq->b_I.size[0] = numNN;
-      for (i47 = 0; i47 < numNN; i47++) {
-        pq->b_I.data[i47] = node_idx_start_data
+      for (i43 = 0; i43 < numNN; i43++) {
+        pq->b_I.data[i43] = node_idx_start_data
           [PerceptionSmartLoaderTLSThread->
-          u3.f4.iidx_data[PerceptionSmartLoaderTLSThread->u3.f4.c_tmp_data[i47]]
+          u3.f4.iidx_data[PerceptionSmartLoaderTLSThread->u3.f4.c_tmp_data[i43]]
           - 1];
       }
     }
   } else {
     loop_ub = aDistOut_size[0];
-    for (i47 = 0; i47 < loop_ub; i47++) {
-      PerceptionSmartLoaderTLSThread->u3.f4.node_idx_start_data[i47] =
-        node_idx_start_data[PerceptionSmartLoaderTLSThread->u3.f4.iidx_data[i47]
+    for (i43 = 0; i43 < loop_ub; i43++) {
+      PerceptionSmartLoaderTLSThread->u3.f4.node_idx_start_data[i43] =
+        node_idx_start_data[PerceptionSmartLoaderTLSThread->u3.f4.iidx_data[i43]
         - 1];
     }
 
@@ -10646,7 +10726,7 @@ static void simpleRandperm(PerceptionSmartLoaderStackData *SD, int n, int
 static void sort(float x_data[], int x_size[1], int idx_data[], int idx_size[1])
 {
   int dim;
-  int i43;
+  int i39;
   int vlen;
   int vwork_size[1];
   int vstride;
@@ -10656,13 +10736,13 @@ static void sort(float x_data[], int x_size[1], int idx_data[], int idx_size[1])
   PerceptionSmartLoaderTLSThread = emlrtGetThreadStackData();
   dim = nonSingletonDim(x_size);
   if (dim <= 1) {
-    i43 = x_size[0];
+    i39 = x_size[0];
   } else {
-    i43 = 1;
+    i39 = 1;
   }
 
-  vlen = i43 - 1;
-  vwork_size[0] = i43;
+  vlen = i39 - 1;
+  vwork_size[0] = i39;
   idx_size[0] = x_size[0];
   vstride = 1;
   for (k = 0; k <= dim - 2; k++) {
@@ -10678,9 +10758,9 @@ static void sort(float x_data[], int x_size[1], int idx_data[], int idx_size[1])
     c_sortIdx(PerceptionSmartLoaderTLSThread->u2.f3.vwork_data, vwork_size,
               PerceptionSmartLoaderTLSThread->u2.f3.iidx_data, iidx_size);
     for (k = 0; k <= vlen; k++) {
-      i43 = dim + k * vstride;
-      x_data[i43] = PerceptionSmartLoaderTLSThread->u2.f3.vwork_data[k];
-      idx_data[i43] = PerceptionSmartLoaderTLSThread->u2.f3.iidx_data[k];
+      i39 = dim + k * vstride;
+      x_data[i39] = PerceptionSmartLoaderTLSThread->u2.f3.vwork_data[k];
+      idx_data[i39] = PerceptionSmartLoaderTLSThread->u2.f3.iidx_data[k];
     }
   }
 }
@@ -10763,13 +10843,13 @@ static void sortrows(PerceptionSmartLoaderStackData *SD, float y_data[], int
 {
   int idx_size[1];
   int loop_ub;
-  int i40;
+  int i36;
   b_sortIdx(SD, y_data, y_size, SD->u2.f14.idx_data, idx_size);
   b_apply_row_permutation(SD, y_data, y_size, SD->u2.f14.idx_data);
   ndx_size[0] = idx_size[0];
   loop_ub = idx_size[0];
-  for (i40 = 0; i40 < loop_ub; i40++) {
-    ndx_data[i40] = SD->u2.f14.idx_data[i40];
+  for (i36 = 0; i36 < loop_ub; i36++) {
+    ndx_data[i36] = SD->u2.f14.idx_data[i36];
   }
 }
 
@@ -10781,31 +10861,31 @@ static void sortrows(PerceptionSmartLoaderStackData *SD, float y_data[], int
 static void squareform(const emxArray_real32_T *Y, emxArray_real32_T *Z)
 {
   int m;
-  int i20;
+  int i19;
   int loop_ub;
   unsigned int k;
   int i;
   int b_i;
-  int i21;
+  int i20;
   m = (int)std::ceil(std::sqrt(2.0 * (double)Y->size[1]));
-  i20 = Z->size[0] * Z->size[1];
+  i19 = Z->size[0] * Z->size[1];
   Z->size[1] = m;
   Z->size[0] = m;
-  emxEnsureCapacity_real32_T(Z, i20);
+  emxEnsureCapacity_real32_T(Z, i19);
   loop_ub = m * m;
-  for (i20 = 0; i20 < loop_ub; i20++) {
-    Z->data[i20] = 0.0F;
+  for (i19 = 0; i19 < loop_ub; i19++) {
+    Z->data[i19] = 0.0F;
   }
 
   if (m > 1) {
     k = 1U;
     for (loop_ub = 0; loop_ub <= m - 2; loop_ub++) {
-      i20 = m - loop_ub;
-      for (i = 0; i <= i20 - 2; i++) {
+      i19 = m - loop_ub;
+      for (i = 0; i <= i19 - 2; i++) {
         b_i = (loop_ub + i) + 1;
-        i21 = (int)k - 1;
-        Z->data[loop_ub + Z->size[1] * b_i] = Y->data[i21];
-        Z->data[b_i + Z->size[1] * loop_ub] = Y->data[i21];
+        i20 = (int)k - 1;
+        Z->data[loop_ub + Z->size[1] * b_i] = Y->data[i20];
+        Z->data[b_i + Z->size[1] * loop_ub] = Y->data[i20];
         k++;
       }
     }
@@ -11873,7 +11953,7 @@ static void xzhgeqz(creal_T A[4], int ilo, int ihi, creal_T Z[4], int *info,
   double b_atol;
   boolean_T firstNonZero;
   int j;
-  int i65;
+  int i61;
   double ascale;
   int jp1;
   double imAij;
@@ -11919,12 +11999,12 @@ static void xzhgeqz(creal_T A[4], int ilo, int ihi, creal_T Z[4], int *info,
     sumsq = 0.0;
     firstNonZero = true;
     for (j = ilo; j <= ihi; j++) {
-      i65 = j + 1;
+      i61 = j + 1;
       if (ihi < j + 1) {
-        i65 = ihi;
+        i61 = ihi;
       }
 
-      for (jp1 = ilo; jp1 <= i65; jp1++) {
+      for (jp1 = ilo; jp1 <= i61; jp1++) {
         reAij = A[(jp1 + ((j - 1) << 1)) - 1].re;
         imAij = A[(jp1 + ((j - 1) << 1)) - 1].im;
         if (reAij != 0.0) {
@@ -12001,11 +12081,11 @@ static void xzhgeqz(creal_T A[4], int ilo, int ihi, creal_T Z[4], int *info,
           goto60 = true;
           b_guard1 = true;
         } else {
-          i65 = ilast + (ilastm1 << 1);
-          if (std::abs(A[i65].re) + std::abs(A[ilast + (ilastm1 << 1)].im) <=
+          i61 = ilast + (ilastm1 << 1);
+          if (std::abs(A[i61].re) + std::abs(A[ilast + (ilastm1 << 1)].im) <=
               b_atol) {
-            A[i65].re = 0.0;
-            A[i65].im = 0.0;
+            A[i61].re = 0.0;
+            A[i61].im = 0.0;
             goto60 = true;
             b_guard1 = true;
           } else {
@@ -12773,28 +12853,31 @@ void PerceptionSmartLoader(PerceptionSmartLoaderStackData *SD, const
   b_struct_T e_tmp_data[32];
 
   // 'PerceptionSmartLoader:4' coder.cstructname(configParams, 'PerceptionSmartLoaderConfigParam'); 
+  // 'PerceptionSmartLoader:5' assert(size(xyz,2) == 3);
+  // 'PerceptionSmartLoader:6' assert(size(intensity,2) == 1);
+  // 'PerceptionSmartLoader:7' if coder.target('Matlab')
   //  Parameters
   //  BinaryWriteImage(xyz, 'D:\git\cpp\SmartLoader\SmartLoaderDataset\Test3\xyz') 
   //  BinaryWriteImage(intensity, 'D:\git\cpp\SmartLoader\SmartLoaderDataset\Test3\intensity') 
   // percisionMode = 'double';
   //
-  // 'PerceptionSmartLoader:14' if ~SmartLoaderGlobal.isInitialized
+  // 'PerceptionSmartLoader:19' if ~SmartLoaderGlobal.isInitialized
   if (!SD->pd->SmartLoaderGlobal.isInitialized) {
-    // 'PerceptionSmartLoader:15' SmartLoaderGlobalInit();
+    // 'PerceptionSmartLoader:20' SmartLoaderGlobalInit();
     SmartLoaderGlobalInit(SD);
   }
 
-  // 'PerceptionSmartLoader:18' debugPtCloudSenceXyz = zeros(0,0,'uint8');
-  // 'PerceptionSmartLoader:19' debugPtCloudSenceIntensity = zeros(0,0,'uint8'); 
-  // 'PerceptionSmartLoader:20' heightMap_res = zeros(0,0,'single');
+  // 'PerceptionSmartLoader:23' debugPtCloudSenceXyz = zeros(0,0,'uint8');
+  // 'PerceptionSmartLoader:24' debugPtCloudSenceIntensity = zeros(0,0,'uint8'); 
+  // 'PerceptionSmartLoader:25' heightMap_res = zeros(0,0,'single');
   heightMap_res_size[1] = 0;
   heightMap_res_size[0] = 0;
 
   //  figure, PlotPointCloud([xyz double(intensity)])
-  // 'PerceptionSmartLoader:24' smartLoaderStruct = GetSmartLoaderStruct();
-  // 'PerceptionSmartLoader:25' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eSuccess; 
+  // 'PerceptionSmartLoader:29' smartLoaderStruct = GetSmartLoaderStruct();
+  // 'PerceptionSmartLoader:30' smartLoaderStruct.status = PerceptionSmartLoaderReturnValue.eSuccess; 
   //  Align the point cloud to the sensor
-  // 'PerceptionSmartLoader:28' [smartLoaderStruct, ptCloudSenceXyz, ptCloudSenceIntensity] = SmartLoaderAlignPointCloud(smartLoaderStruct, configParams, xyz, intensity); 
+  // 'PerceptionSmartLoader:33' [smartLoaderStruct, ptCloudSenceXyz, ptCloudSenceIntensity] = SmartLoaderAlignPointCloud(smartLoaderStruct, configParams, xyz, intensity); 
   smartLoaderStruct->heightMapStatus = false;
   smartLoaderStruct->loaderLocStatus = false;
   smartLoaderStruct->loaderLoc[0] = 0.0;
@@ -12817,12 +12900,12 @@ void PerceptionSmartLoader(PerceptionSmartLoaderStackData *SD, const
     SD->f23.ptCloudSenceXyz_data, ptCloudSenceXyz_size,
     SD->f23.ptCloudSenceIntensity_data, ptCloudSenceIntensity_size);
 
-  // 'PerceptionSmartLoader:29' if smartLoaderStruct.status ~= PerceptionSmartLoaderReturnValue.eSuccess 
+  // 'PerceptionSmartLoader:34' if smartLoaderStruct.status ~= PerceptionSmartLoaderReturnValue.eSuccess 
   if (!(smartLoaderStruct->status != PerceptionSmartLoaderReturnValue_eSuccess))
   {
     //  figure, PlotPointCloud([ptCloudSenceXyz, ptCloudSenceIntensity])
     //  Create height map
-    // 'PerceptionSmartLoader:33' [smartLoaderStruct, heightMap_res] = SmartLoaderCreateHeightMap(smartLoaderStruct, configParams, ptCloudSenceXyz); 
+    // 'PerceptionSmartLoader:38' [smartLoaderStruct, heightMap_res] = SmartLoaderCreateHeightMap(smartLoaderStruct, configParams, ptCloudSenceXyz); 
     SmartLoaderCreateHeightMap(SD, smartLoaderStruct, configParams->xyzLimits,
       configParams->heightMapResolutionMeterToPixel,
       SD->f23.ptCloudSenceXyz_data, ptCloudSenceXyz_size, heightMap_res_data,
@@ -12831,26 +12914,26 @@ void PerceptionSmartLoader(PerceptionSmartLoaderStackData *SD, const
     //  figure, imagesc(heightMap_res);
     //  figure, imshow(heightMap_res, []);
     //  Estiamte the loader, shovel locations and angles
-    // 'PerceptionSmartLoader:38' [smartLoaderStruct] = SmartLoaderEstiamteLocations(smartLoaderStruct, configParams, ptCloudSenceXyz, ptCloudSenceIntensity); 
+    // 'PerceptionSmartLoader:43' [smartLoaderStruct] = SmartLoaderEstiamteLocations(smartLoaderStruct, configParams, ptCloudSenceXyz, ptCloudSenceIntensity); 
     SmartLoaderEstiamteLocations(SD, smartLoaderStruct, configParams,
       SD->f23.ptCloudSenceXyz_data, ptCloudSenceXyz_size,
       SD->f23.ptCloudSenceIntensity_data, ptCloudSenceIntensity_size);
 
-    // 'PerceptionSmartLoader:39' if smartLoaderStruct.status ~= PerceptionSmartLoaderReturnValue.eSuccess 
+    // 'PerceptionSmartLoader:44' if smartLoaderStruct.status ~= PerceptionSmartLoaderReturnValue.eSuccess 
     if (!(smartLoaderStruct->status != PerceptionSmartLoaderReturnValue_eSuccess))
     {
       //
-      // 'PerceptionSmartLoader:42' smartLoaderStruct = SmartLoaderSmoothAngles(smartLoaderStruct, configParams); 
+      // 'PerceptionSmartLoader:47' smartLoaderStruct = SmartLoaderSmoothAngles(smartLoaderStruct, configParams); 
       SmartLoaderSmoothAngles(SD, smartLoaderStruct,
         configParams->loaderYawAngleSmoothWeight,
         configParams->loaderToShovelYawAngleSmoothWeight);
 
       //  Plot the point cloud with an image at the side
-      // 'PerceptionSmartLoader:45' if coder.target('Matlab') && configParams.debugMode 
+      // 'PerceptionSmartLoader:50' if coder.target('Matlab') && configParams.debugMode 
       //  Save the location history
-      // 'PerceptionSmartLoader:50' if smartLoaderStruct.loaderLocStatus
+      // 'PerceptionSmartLoader:55' if smartLoaderStruct.loaderLocStatus
       if (smartLoaderStruct->loaderLocStatus) {
-        // 'PerceptionSmartLoader:51' SmartLoaderGlobal.smartLoaderStructHistory = [SmartLoaderGlobal.smartLoaderStructHistory; smartLoaderStruct]; 
+        // 'PerceptionSmartLoader:56' SmartLoaderGlobal.smartLoaderStructHistory = [SmartLoaderGlobal.smartLoaderStructHistory; smartLoaderStruct]; 
         r0.heightMapStatus = smartLoaderStruct->heightMapStatus;
         r0.loaderLocStatus = smartLoaderStruct->loaderLocStatus;
         r0.loaderLoc[0] = smartLoaderStruct->loaderLoc[0];
@@ -12890,7 +12973,7 @@ void PerceptionSmartLoader(PerceptionSmartLoaderStackData *SD, const
                   (b_struct_T)));
         }
 
-        // 'PerceptionSmartLoader:52' SmartLoaderGlobal.loaderTimeTatHistoryMs = [SmartLoaderGlobal.loaderTimeTatHistoryMs; configParams.timeTagMs]; 
+        // 'PerceptionSmartLoader:57' SmartLoaderGlobal.loaderTimeTatHistoryMs = [SmartLoaderGlobal.loaderTimeTatHistoryMs; configParams.timeTagMs]; 
         tmp_size_idx_0 = SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0]
           + 1;
         if (0 <= SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] - 1) {
@@ -12909,11 +12992,11 @@ void PerceptionSmartLoader(PerceptionSmartLoaderStackData *SD, const
                   (unsigned long)));
         }
 
-        // 'PerceptionSmartLoader:54' if size(SmartLoaderGlobal.loaderTimeTatHistoryMs,1) >= SmartLoaderCompilationConstants.MaxHistorySize - 1 
+        // 'PerceptionSmartLoader:59' if size(SmartLoaderGlobal.loaderTimeTatHistoryMs,1) >= SmartLoaderCompilationConstants.MaxHistorySize - 1 
         if (SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0] >= 31) {
-          // 'PerceptionSmartLoader:55' shiftArrayBy = 10;
-          // 'PerceptionSmartLoader:57' SmartLoaderGlobal.loaderTimeTatHistoryMs = ... 
-          // 'PerceptionSmartLoader:58'             SmartLoaderGlobal.loaderTimeTatHistoryMs((SmartLoaderCompilationConstants.MaxHistorySize - shiftArrayBy):end); 
+          // 'PerceptionSmartLoader:60' shiftArrayBy = 10;
+          // 'PerceptionSmartLoader:62' SmartLoaderGlobal.loaderTimeTatHistoryMs = ... 
+          // 'PerceptionSmartLoader:63'             SmartLoaderGlobal.loaderTimeTatHistoryMs((SmartLoaderCompilationConstants.MaxHistorySize - shiftArrayBy):end); 
           if (22 > SD->pd->SmartLoaderGlobal.loaderTimeTatHistoryMs.size[0]) {
             i0 = 1;
             i1 = 0;
@@ -12941,8 +13024,8 @@ void PerceptionSmartLoader(PerceptionSmartLoaderStackData *SD, const
                     (unsigned long)));
           }
 
-          // 'PerceptionSmartLoader:60' SmartLoaderGlobal.smartLoaderStructHistory = ... 
-          // 'PerceptionSmartLoader:61'             SmartLoaderGlobal.smartLoaderStructHistory((SmartLoaderCompilationConstants.MaxHistorySize - shiftArrayBy):end,:); 
+          // 'PerceptionSmartLoader:65' SmartLoaderGlobal.smartLoaderStructHistory = ... 
+          // 'PerceptionSmartLoader:66'             SmartLoaderGlobal.smartLoaderStructHistory((SmartLoaderCompilationConstants.MaxHistorySize - shiftArrayBy):end,:); 
           if (22 > SD->pd->SmartLoaderGlobal.smartLoaderStructHistory.size[0]) {
             i0 = 0;
             i1 = 0;
@@ -12967,7 +13050,7 @@ void PerceptionSmartLoader(PerceptionSmartLoaderStackData *SD, const
         }
       }
 
-      // 'PerceptionSmartLoader:65' if coder.target('Matlab')
+      // 'PerceptionSmartLoader:70' if coder.target('Matlab')
     }
   }
 }
@@ -12983,7 +13066,6 @@ void PerceptionSmartLoader_initialize(PerceptionSmartLoaderStackData *SD)
   unsigned long y_loaderTimeTatHistoryMs_data[32];
   omp_init_nest_lock(&emlrtNestLockGlobal);
   emxInitStruct_struct_T(&SD->pd->SmartLoaderGlobal);
-  SD->pd->imgDimsPersistent_not_empty = false;
   for (j = 0; j < 32; j++) {
     y_smartLoaderStructHistory_data[j].heightMapStatus = false;
     y_smartLoaderStructHistory_data[j].loaderLocStatus = false;

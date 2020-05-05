@@ -150,7 +150,7 @@ link_directories("lib" "/usr/lib/x86-64-linux-gnu")
 add_executable(innov_pose src/posepublisher.cpp src/PerceptionSmartLoader.cpp src/PerceptionSmartLoader_emxutil.cpp)
 
 
-target_link_libraries(innov_pose  mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_flat_tbb gomp ${catkin_LIBRARIES} )
+target_link_libraries(innov_pose  opencv_highgui mwmorphop_binary_tbb mwmorphop_ocv mwmorphop_flat_tbb gomp ${catkin_LIBRARIES} )
 
 add_executable(innov_example src/example.cpp)
 target_link_libraries(innov_example ${catkin_LIBRARIES})

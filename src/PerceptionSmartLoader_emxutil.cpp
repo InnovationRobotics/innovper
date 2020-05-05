@@ -2,7 +2,7 @@
 // File: PerceptionSmartLoader_emxutil.cpp
 //
 // MATLAB Coder version            : 4.1
-// C/C++ source code generated on  : 20-Apr-2020 15:35:54
+// C/C++ source code generated on  : 05-May-2020 11:47:28
 //
 
 // Include Files
@@ -14,12 +14,12 @@
 // Function Declarations
 static void emxExpand_cell_wrap_13(emxArray_cell_wrap_13 *emxArray, int
   fromIndex, int toIndex);
-static void emxExpand_cell_wrap_3_64x1(cell_wrap_3 data[64], int fromIndex, int
+static void emxExpand_cell_wrap_4_64x1(cell_wrap_4 data[64], int fromIndex, int
   toIndex);
-static void emxFreeStruct_cell_wrap_3(cell_wrap_3 *pStruct);
+static void emxFreeStruct_cell_wrap_4(cell_wrap_4 *pStruct);
 static void emxInitStruct_cell_wrap_13(cell_wrap_13 *pStruct);
-static void emxInitStruct_cell_wrap_3(cell_wrap_3 *pStruct);
-static void emxTrim_cell_wrap_3_64x1(cell_wrap_3 data[64], int fromIndex, int
+static void emxInitStruct_cell_wrap_4(cell_wrap_4 *pStruct);
+static void emxTrim_cell_wrap_4_64x1(cell_wrap_4 data[64], int fromIndex, int
   toIndex);
 
 // Function Definitions
@@ -40,25 +40,25 @@ static void emxExpand_cell_wrap_13(emxArray_cell_wrap_13 *emxArray, int
 }
 
 //
-// Arguments    : cell_wrap_3 data[64]
+// Arguments    : cell_wrap_4 data[64]
 //                int fromIndex
 //                int toIndex
 // Return Type  : void
 //
-static void emxExpand_cell_wrap_3_64x1(cell_wrap_3 data[64], int fromIndex, int
+static void emxExpand_cell_wrap_4_64x1(cell_wrap_4 data[64], int fromIndex, int
   toIndex)
 {
   int i;
   for (i = fromIndex; i < toIndex; i++) {
-    emxInitStruct_cell_wrap_3(&data[i]);
+    emxInitStruct_cell_wrap_4(&data[i]);
   }
 }
 
 //
-// Arguments    : cell_wrap_3 *pStruct
+// Arguments    : cell_wrap_4 *pStruct
 // Return Type  : void
 //
-static void emxFreeStruct_cell_wrap_3(cell_wrap_3 *pStruct)
+static void emxFreeStruct_cell_wrap_4(cell_wrap_4 *pStruct)
 {
   emxFree_real32_T(&pStruct->f1);
 }
@@ -74,26 +74,26 @@ static void emxInitStruct_cell_wrap_13(cell_wrap_13 *pStruct)
 }
 
 //
-// Arguments    : cell_wrap_3 *pStruct
+// Arguments    : cell_wrap_4 *pStruct
 // Return Type  : void
 //
-static void emxInitStruct_cell_wrap_3(cell_wrap_3 *pStruct)
+static void emxInitStruct_cell_wrap_4(cell_wrap_4 *pStruct)
 {
   emxInit_real32_T(&pStruct->f1, 2);
 }
 
 //
-// Arguments    : cell_wrap_3 data[64]
+// Arguments    : cell_wrap_4 data[64]
 //                int fromIndex
 //                int toIndex
 // Return Type  : void
 //
-static void emxTrim_cell_wrap_3_64x1(cell_wrap_3 data[64], int fromIndex, int
+static void emxTrim_cell_wrap_4_64x1(cell_wrap_4 data[64], int fromIndex, int
   toIndex)
 {
   int i;
   for (i = fromIndex; i < toIndex; i++) {
-    emxFreeStruct_cell_wrap_3(&data[i]);
+    emxFreeStruct_cell_wrap_4(&data[i]);
   }
 }
 
@@ -150,12 +150,12 @@ void emxEnsureCapacity_cell_wrap_13(emxArray_cell_wrap_13 *emxArray, int
 }
 
 //
-// Arguments    : cell_wrap_3 data[64]
+// Arguments    : cell_wrap_4 data[64]
 //                int size[2]
 //                int oldNumel
 // Return Type  : void
 //
-void emxEnsureCapacity_cell_wrap_3(cell_wrap_3 data[64], int size[2], int
+void emxEnsureCapacity_cell_wrap_4(cell_wrap_4 data[64], int size[2], int
   oldNumel)
 {
   int newNumel;
@@ -165,10 +165,10 @@ void emxEnsureCapacity_cell_wrap_3(cell_wrap_3 data[64], int size[2], int
 
   newNumel = size[0] * size[1];
   if (oldNumel > newNumel) {
-    emxTrim_cell_wrap_3_64x1(data, newNumel, oldNumel);
+    emxTrim_cell_wrap_4_64x1(data, newNumel, oldNumel);
   } else {
     if (oldNumel < newNumel) {
-      emxExpand_cell_wrap_3_64x1(data, oldNumel, newNumel);
+      emxExpand_cell_wrap_4_64x1(data, oldNumel, newNumel);
     }
   }
 }
@@ -315,13 +315,13 @@ void emxEnsureCapacity_real_T(emxArray_real_T *emxArray, int oldNumel)
 }
 
 //
-// Arguments    : cell_wrap_3 pMatrix[2]
+// Arguments    : cell_wrap_4 pMatrix[2]
 // Return Type  : void
 //
-void emxFreeMatrix_cell_wrap_3(cell_wrap_3 pMatrix[2])
+void emxFreeMatrix_cell_wrap_4(cell_wrap_4 pMatrix[2])
 {
-  emxFreeStruct_cell_wrap_3(&pMatrix[0]);
-  emxFreeStruct_cell_wrap_3(&pMatrix[1]);
+  emxFreeStruct_cell_wrap_4(&pMatrix[0]);
+  emxFreeStruct_cell_wrap_4(&pMatrix[1]);
 }
 
 //
@@ -343,17 +343,17 @@ void emxFree_cell_wrap_13(emxArray_cell_wrap_13 **pEmxArray)
 }
 
 //
-// Arguments    : emxArray_cell_wrap_3_64x1 *pEmxArray
+// Arguments    : emxArray_cell_wrap_4_64x1 *pEmxArray
 // Return Type  : void
 //
-void emxFree_cell_wrap_3_64x1(emxArray_cell_wrap_3_64x1 *pEmxArray)
+void emxFree_cell_wrap_4_64x1(emxArray_cell_wrap_4_64x1 *pEmxArray)
 {
   int numEl;
   int i;
   numEl = pEmxArray->size[0];
   numEl *= pEmxArray->size[1];
   for (i = 0; i < numEl; i++) {
-    emxFreeStruct_cell_wrap_3(&pEmxArray->data[i]);
+    emxFreeStruct_cell_wrap_4(&pEmxArray->data[i]);
   }
 }
 
@@ -409,13 +409,13 @@ void emxFree_real_T(emxArray_real_T **pEmxArray)
 }
 
 //
-// Arguments    : cell_wrap_3 pMatrix[2]
+// Arguments    : cell_wrap_4 pMatrix[2]
 // Return Type  : void
 //
-void emxInitMatrix_cell_wrap_3(cell_wrap_3 pMatrix[2])
+void emxInitMatrix_cell_wrap_4(cell_wrap_4 pMatrix[2])
 {
-  emxInitStruct_cell_wrap_3(&pMatrix[0]);
-  emxInitStruct_cell_wrap_3(&pMatrix[1]);
+  emxInitStruct_cell_wrap_4(&pMatrix[0]);
+  emxInitStruct_cell_wrap_4(&pMatrix[1]);
 }
 
 //
@@ -450,10 +450,10 @@ void emxInit_cell_wrap_13(emxArray_cell_wrap_13 **pEmxArray, int numDimensions)
 }
 
 //
-// Arguments    : emxArray_cell_wrap_3_64x1 *pEmxArray
+// Arguments    : emxArray_cell_wrap_4_64x1 *pEmxArray
 // Return Type  : void
 //
-void emxInit_cell_wrap_3_64x1(emxArray_cell_wrap_3_64x1 *pEmxArray)
+void emxInit_cell_wrap_4_64x1(emxArray_cell_wrap_4_64x1 *pEmxArray)
 {
   pEmxArray->size[0] = 0;
   pEmxArray->size[1] = 0;

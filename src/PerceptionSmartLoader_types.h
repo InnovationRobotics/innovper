@@ -2,7 +2,7 @@
 // File: PerceptionSmartLoader_types.h
 //
 // MATLAB Coder version            : 4.1
-// C/C++ source code generated on  : 20-Apr-2020 15:35:54
+// C/C++ source code generated on  : 05-May-2020 11:47:28
 //
 #ifndef PERCEPTIONSMARTLOADER_TYPES_H
 #define PERCEPTIONSMARTLOADER_TYPES_H
@@ -27,6 +27,7 @@ typedef struct {
   double loaderCenterToBackwardPointMeter;
   double locationsBiasMeter;
   double loaderWidthMeter;
+  double loaderHeightMeter;
   double reflectorMaxZaxisDistanceForOutlierMeter;
   double previousLoaderLocationToCurrentLocationMaximumDistanceMeter;
   double loaderReflectorMaxZaxisDistanceForOutlierMeter;
@@ -101,12 +102,9 @@ struct emxArray_real_T
 
 typedef struct {
   c_struct_T SmartLoaderGlobal;
-  double imgDimsPersistent[2];
-  boolean_T imgDimsPersistent_not_empty;
   emxArray_real32_T *heightMap_resPersistent;
   boolean_T heightMap_resPersistent_not_empty;
   emxArray_real_T *allImgInds;
-  boolean_T allImgInds_not_empty;
   unsigned int state[625];
 } PerceptionSmartLoaderPersistentData;
 
@@ -308,37 +306,28 @@ typedef struct {
     } f20;
 
     struct {
-      int y_data[4194304];
       struct_T expl_temp;
       int notnan_data[504000];
-      int ii_data[504000];
-      int iidx_data[504000];
-      int b_ii_data[504000];
       unsigned int tempIdx_data[504000];
       float x_data[504000];
+      int iidx_data[504000];
       int tmp_data[504000];
       int b_tmp_data[252000];
       double lowerBoundsTemp_data[65534];
       double upperBoundsTemp_data[65534];
       double cgstruct_lowerBounds_data[65534];
       double cgstruct_upperBounds_data[65534];
-      boolean_T c_tmp_data[504000];
-      boolean_T b_x_data[504000];
       double cutValTemp_data[32767];
       double leftChildTemp_data[32767];
       double rightChildTemp_data[32767];
       double cgstruct_cutVal_data[32767];
       double cgstruct_leftChild_data[32767];
       int cutDimTemp_data[32767];
-      short d_tmp_data[32767];
+      short c_tmp_data[32767];
     } f21;
   } u6;
 
   struct {
-    int y_data[4194304];
-    int v1_data[4194304];
-    int vk_data[4194304];
-    int colInd_data[4194304];
     int tmp_data[4194304];
     float xyzInsideImg_data[1512000];
     float xyzSortedUnique_data[1512000];
@@ -463,7 +452,7 @@ struct sfwI8zOKrNsirWOkLmXxW2D_tag
   emxArray_real32_T *f1;
 };
 
-typedef sfwI8zOKrNsirWOkLmXxW2D_tag cell_wrap_3;
+typedef sfwI8zOKrNsirWOkLmXxW2D_tag cell_wrap_4;
 struct emxArray_sR9nrfT5CUH1cTOx6GipQw_tag
 {
   cell_wrap_13 *data;
@@ -476,11 +465,11 @@ struct emxArray_sR9nrfT5CUH1cTOx6GipQw_tag
 typedef emxArray_sR9nrfT5CUH1cTOx6GipQw_tag emxArray_cell_wrap_13;
 struct emxArray_sfwI8zOKrNsirWOkLmXxW2D_tag_64x1
 {
-  cell_wrap_3 data[64];
+  cell_wrap_4 data[64];
   int size[2];
 };
 
-typedef emxArray_sfwI8zOKrNsirWOkLmXxW2D_tag_64x1 emxArray_cell_wrap_3_64x1;
+typedef emxArray_sfwI8zOKrNsirWOkLmXxW2D_tag_64x1 emxArray_cell_wrap_4_64x1;
 struct emxArray_int32_T
 {
   int *data;

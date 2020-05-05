@@ -30,7 +30,7 @@ namespace IAIRoboticsAlgorithms
 	public:
 	
 		static bool WriteBinary(const void* src, int numBands, int numBytePerBand, int srcWidth,
-		 	int srcHeight, std::string token)
+		 	int srcHeight, const std::string& saveFolder, const std::string& fileName )
 		{
 			// const char* savePath, std::string& stringSavePath
 			std::vector<unsigned char> data;
@@ -39,16 +39,7 @@ namespace IAIRoboticsAlgorithms
 
 			memcpy(&data[0], src, sizeByte);
 
-			// std::string pathstr, name, ext;
-			// IAIRoboticsAlgorithms::FileUtility::GetFileParts(IAIRoboticsAlgorithms::StringUtility::TrimStartAndEndSpaces(std::string(savePath)), pathstr, name, ext);
-
-			// if (ext.empty())
-			// 	ext = ".bin";
-
-			// Our token for Matlab reference 
-			// stringSavePath = pathstr + "\\" + name + BinaryIO::GetBinaryToken(numBands, numBytePerBand, srcWidth, srcHeight) + ext;
-			
-			std::string stringSavePath = "/home/sload/Downloads/temp/10/" + token + 
+			std::string stringSavePath = saveFolder + fileName + 
 				BinaryIO::GetBinaryToken(numBands, numBytePerBand, srcWidth, srcHeight) + ".bin";
 
 			// Save the raw data 
